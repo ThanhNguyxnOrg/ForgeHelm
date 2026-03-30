@@ -14,9 +14,10 @@ class GitHubClient {
   }
 
   buildHeaders() {
-    if (!this.token) throw new TokenError('No token configured');
+    if (!this.token) throw new TokenError('No token configured. Please add your GitHub token in Settings.');
+    const prefix = this.token.startsWith('ghp_') ? 'token' : 'Bearer';
     return {
-      Authorization: `Bearer ${this.token}`,
+      Authorization: `${prefix} ${this.token}`,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': API_VERSION,
       'Content-Type': 'application/json',
@@ -59,7 +60,9 @@ class GitHubClient {
 
       if (res.ok || res.status === 204) return res;
 
-      if ((res.status === 403 || res.status === 429) && attempt < retries) {
+      const apiError = await parseGitHubError(res);
+
+      if (apiError.isRateLimit && attempt < retries) {
         const retryAfter = res.headers.get('Retry-After');
         const waitMs = retryAfter
           ? parseInt(retryAfter, 10) * 1000
@@ -69,7 +72,11 @@ class GitHubClient {
         continue;
       }
 
-      throw await parseGitHubError(res);
+      if (apiError.isForbidden && apiError.permissionHint) {
+        apiError.message = `${apiError.message}. ${apiError.permissionHint}`;
+      }
+
+      throw apiError;
     }
   }
 

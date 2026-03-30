@@ -7,16 +7,22 @@ export class ForgeHelmError extends Error {
 }
 
 export class GitHubApiError extends ForgeHelmError {
-  constructor(status, message, errors = [], docUrl = '') {
+  constructor(status, message, errors = [], docUrl = '', requiredPermissions = '') {
     super(message, 'GITHUB_API');
     this.name = 'GitHubApiError';
     this.status = status;
     this.errors = errors;
     this.docUrl = docUrl;
+    this.requiredPermissions = requiredPermissions;
   }
 
   get isRateLimit() {
-    return this.status === 403 || this.status === 429;
+    if (this.status === 429) return true;
+    if (this.status === 403) {
+      const msg = this.message.toLowerCase();
+      return msg.includes('rate limit') || msg.includes('abuse detection');
+    }
+    return false;
   }
 
   get isUnauthorized() {
@@ -33,6 +39,18 @@ export class GitHubApiError extends ForgeHelmError {
 
   get isValidation() {
     return this.status === 422;
+  }
+
+  get permissionHint() {
+    if (!this.isForbidden) return '';
+    if (this.requiredPermissions) {
+      return `Required permission: ${this.requiredPermissions}`;
+    }
+    const msg = this.message.toLowerCase();
+    if (msg.includes('resource not accessible')) {
+      return 'Token lacks required permissions. For fine-grained PAT: enable "Administration: Read & Write". For classic PAT: enable "repo" + "delete_repo" scopes.';
+    }
+    return 'Access denied. Check your token permissions.';
   }
 }
 
@@ -62,5 +80,8 @@ export async function parseGitHubError(response) {
   const errors = body.errors || [];
   const docUrl = body.documentation_url || '';
 
-  return new GitHubApiError(response.status, message, errors, docUrl);
+  // Extract required permissions from GitHub's response header (available on 403)
+  const requiredPermissions = response.headers?.get('X-Accepted-GitHub-Permissions') || '';
+
+  return new GitHubApiError(response.status, message, errors, docUrl, requiredPermissions);
 }
