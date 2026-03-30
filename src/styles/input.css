@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,11 +16,13 @@
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
+  /* Custom scrollbar — thin, subtle */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   ::-webkit-scrollbar-track {
@@ -26,53 +30,88 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-fh-muted rounded-full;
+    @apply rounded-full;
+    background: rgba(139, 148, 158, 0.25);
+    transition: background 0.2s;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-fh-border-hover;
+    background: rgba(139, 148, 158, 0.45);
+  }
+
+  /* Focus visible for keyboard nav only */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-fh-accent/50 ring-offset-1 ring-offset-fh-bg;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
+
+  /* ── Buttons ── */
+
   .fh-btn {
     @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5
            text-xs font-medium rounded-md border
            transition-all duration-150 cursor-pointer select-none
-           focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-fh-bg;
+           focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-offset-1 focus-visible:ring-offset-fh-bg
+           active:scale-[0.97];
   }
 
   .fh-btn-primary {
     @apply fh-btn bg-fh-green-muted border-transparent text-white
-           hover:bg-fh-green focus:ring-fh-green;
+           hover:bg-fh-green hover:shadow-fh-glow-green
+           focus-visible:ring-fh-green;
   }
 
   .fh-btn-secondary {
     @apply fh-btn bg-fh-overlay border-fh-border text-fh-text
-           hover:bg-fh-muted hover:border-fh-border-hover focus:ring-fh-accent;
+           hover:bg-fh-muted hover:border-fh-border-hover
+           focus-visible:ring-fh-accent;
   }
 
   .fh-btn-danger {
     @apply fh-btn bg-fh-red-muted border-transparent text-white
-           hover:bg-fh-red focus:ring-fh-red;
+           hover:bg-fh-red hover:shadow-fh-glow-red
+           focus-visible:ring-fh-red;
   }
 
   .fh-btn-ghost {
     @apply fh-btn bg-transparent border-transparent text-fh-text-secondary
-           hover:bg-fh-overlay hover:text-fh-text focus:ring-fh-accent;
+           hover:bg-fh-overlay hover:text-fh-text
+           focus-visible:ring-fh-accent;
   }
 
   .fh-btn-icon {
     @apply fh-btn p-1.5 bg-transparent border-transparent text-fh-text-secondary
-           hover:bg-fh-overlay hover:text-fh-text;
+           hover:bg-fh-overlay hover:text-fh-text rounded-lg;
   }
 
+  /* ── Inputs ── */
+
   .fh-input {
-    @apply w-full px-3 py-1.5 text-sm rounded-md
+    @apply w-full px-3 py-1.5 text-sm rounded-lg
            bg-fh-bg border border-fh-border text-fh-text
            placeholder:text-fh-text-muted
            focus:outline-none focus:border-fh-accent focus:ring-1 focus:ring-fh-accent
-           transition-colors duration-150;
+           focus:shadow-fh-glow
+           transition-all duration-150;
   }
 
   .fh-select {
@@ -83,56 +122,184 @@
     background-size: 1.25em 1.25em;
   }
 
+  /* ── Cards ── */
+
   .fh-card {
     @apply bg-fh-surface border border-fh-border rounded-lg
            transition-all duration-150;
   }
 
   .fh-card-interactive {
-    @apply fh-card hover:border-fh-border-hover cursor-pointer;
+    @apply fh-card
+           hover:border-fh-border-hover hover:bg-fh-elevated
+           hover:shadow-fh-md
+           cursor-pointer;
   }
 
+  .fh-card-selected {
+    @apply border-fh-accent/40 bg-fh-accent-subtle shadow-fh-glow;
+  }
+
+  /* ── Glass surfaces ── */
+
+  .fh-glass {
+    @apply bg-fh-surface/80 backdrop-blur-md border border-fh-border/60;
+  }
+
+  .fh-glass-elevated {
+    @apply bg-fh-elevated/85 backdrop-blur-lg border border-fh-border/50
+           shadow-fh-xl;
+  }
+
+  /* ── Badges ── */
+
   .fh-badge {
-    @apply inline-flex items-center px-2 py-0.5 text-2xs font-medium
-           rounded-full border;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-2xs font-medium
+           rounded-full border leading-none;
   }
 
   .fh-badge-public {
-    @apply fh-badge border-fh-green/30 bg-fh-green/10 text-fh-green;
+    @apply fh-badge border-fh-green/20 bg-fh-green-subtle text-fh-green;
   }
 
   .fh-badge-private {
-    @apply fh-badge border-fh-purple/30 bg-fh-purple/10 text-fh-purple;
+    @apply fh-badge border-fh-purple/20 bg-fh-purple-subtle text-fh-purple;
   }
 
   .fh-badge-archived {
-    @apply fh-badge border-fh-yellow/30 bg-fh-yellow/10 text-fh-yellow;
+    @apply fh-badge border-fh-yellow/20 bg-fh-yellow-subtle text-fh-yellow;
   }
 
   .fh-badge-fork {
-    @apply fh-badge border-fh-text-muted/30 bg-fh-text-muted/10 text-fh-text-secondary;
+    @apply fh-badge border-fh-text-muted/20 bg-fh-text-muted/10 text-fh-text-secondary;
   }
 
+  /* ── Skeleton loaders ── */
+
   .fh-skeleton {
-    @apply rounded bg-fh-overlay;
-    background: linear-gradient(90deg, #21262d 25%, #2d333b 50%, #21262d 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    @apply rounded-md;
+    background: linear-gradient(90deg, #21262d 25%, #2d333b 37%, #21262d 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
   }
+
+  /* ── Dividers ── */
 
   .fh-divider {
     @apply border-t border-fh-border;
   }
 
+  /* ── Tooltip ── */
+
   .fh-tooltip {
-    @apply absolute z-50 px-2 py-1 text-xs text-fh-text bg-fh-elevated
-           border border-fh-border rounded-md shadow-fh-lg
+    @apply absolute z-50 px-2.5 py-1.5 text-xs text-fh-text
+           bg-fh-elevated/95 backdrop-blur-sm
+           border border-fh-border rounded-lg shadow-fh-lg
            pointer-events-none opacity-0 transition-opacity duration-150;
   }
 
+  /* ── Modal / Overlay backdrops ── */
+
   .fh-overlay-backdrop {
-    @apply fixed inset-0 bg-black/50 z-40;
+    @apply fixed inset-0 bg-black/60 z-40;
+    backdrop-filter: blur(6px);
+  }
+
+  /* ── Kbd shortcuts ── */
+
+  .fh-kbd {
+    @apply inline-flex items-center justify-center min-w-[1.25rem] h-5
+           px-1.5 text-2xs font-mono font-medium
+           bg-fh-overlay border border-fh-border rounded
+           text-fh-text-muted leading-none;
+  }
+
+  /* ── Progress bar ── */
+
+  .fh-progress-bar {
+    @apply h-1.5 rounded-full overflow-hidden bg-fh-overlay;
+  }
+
+  .fh-progress-fill {
+    @apply h-full rounded-full transition-all duration-300 ease-out;
+    background: linear-gradient(90deg, #238636, #3fb950, #58a6ff);
+  }
+
+  .fh-progress-striped .fh-progress-fill {
+    background-image: linear-gradient(
+      45deg,
+      rgba(255,255,255,0.1) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255,255,255,0.1) 50%,
+      rgba(255,255,255,0.1) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+    animation: progressStripe 1s linear infinite;
+  }
+
+  /* ── Command palette ── */
+
+  .fh-palette-backdrop {
+    @apply fixed inset-0 z-[60] bg-black/50;
     backdrop-filter: blur(4px);
+  }
+
+  .fh-palette {
+    @apply fixed z-[70] left-1/2 -translate-x-1/2 top-[15%]
+           w-[440px] max-h-[420px]
+           bg-fh-surface/95 backdrop-blur-xl
+           border border-fh-border/60 rounded-xl
+           shadow-fh-xl overflow-hidden
+           flex flex-col;
+  }
+
+  .fh-palette-input {
+    @apply w-full px-4 py-3 text-sm bg-transparent border-b border-fh-border
+           text-fh-text placeholder:text-fh-text-muted
+           focus:outline-none font-sans;
+  }
+
+  .fh-palette-list {
+    @apply flex-1 overflow-y-auto py-1.5;
+  }
+
+  .fh-palette-item {
+    @apply flex items-center gap-3 px-4 py-2.5 cursor-pointer
+           text-sm text-fh-text-secondary
+           transition-colors duration-100;
+  }
+
+  .fh-palette-item[data-active="true"],
+  .fh-palette-item:hover {
+    @apply bg-fh-accent/10 text-fh-text;
+  }
+
+  .fh-palette-item[data-active="true"] {
+    @apply bg-fh-accent/15;
+  }
+
+  .fh-palette-category {
+    @apply px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wider
+           text-fh-text-muted select-none;
+  }
+
+  .fh-palette-empty {
+    @apply px-4 py-8 text-center text-sm text-fh-text-muted;
+  }
+
+  /* ── Dot indicator ── */
+
+  .fh-dot {
+    @apply w-2 h-2 rounded-full shrink-0;
+  }
+
+  /* ── Status indicator ── */
+
+  .fh-status-dot {
+    @apply w-1.5 h-1.5 rounded-full;
   }
 }
 
@@ -145,6 +312,27 @@
   }
 
   .fh-ring-focus {
-    @apply focus:outline-none focus:ring-2 focus:ring-fh-accent focus:ring-offset-1 focus:ring-offset-fh-bg;
+    @apply focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-fh-accent/50 focus-visible:ring-offset-1
+           focus-visible:ring-offset-fh-bg;
+  }
+
+  .fh-text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #58a6ff, #bc8cff);
+  }
+
+  .fh-border-gradient {
+    border-image: linear-gradient(135deg, #58a6ff33, #bc8cff33) 1;
+  }
+
+  /* Smooth scrollbar fade */
+  .fh-scroll-fade {
+    mask-image: linear-gradient(to bottom,
+      transparent 0%,
+      black 8px,
+      black calc(100% - 8px),
+      transparent 100%
+    );
   }
 }

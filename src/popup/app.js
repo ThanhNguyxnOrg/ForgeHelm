@@ -5,6 +5,7 @@ import { renderRepoCard } from './renderer.js';
 import { showModal } from './components/modal.js';
 import { showToast } from './components/toast.js';
 import { showProgress, hideProgress } from './components/progress.js';
+import { registerCommands, openPalette, isPaletteOpen } from './components/command-palette.js';
 
 const state = createState();
 
@@ -24,7 +25,7 @@ function injectIcons() {
   const map = {
     headerIcon: ['hammer', { size: 20 }],
     settingsIcon: ['settings', {}],
-    searchIcon: ['search', {}],
+    searchIcon: ['search', { size: 14 }],
     refreshIcon: ['refresh', {}],
     externalLinkIcon: ['externalLink', {}],
     tokenToggleIcon: ['eye', {}],
@@ -33,11 +34,156 @@ function injectIcons() {
     bulkArchiveIcon: ['archive', { size: 12 }],
     bulkDeleteIcon: ['trash', { size: 12 }],
     rateLimitIcon: ['shield', {}],
+    cmdPaletteIcon: ['command', { size: 14 }],
   };
   for (const [id, [name, opts]] of Object.entries(map)) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = icon(name, opts);
   }
+}
+
+function initCommandPalette() {
+  const commands = [
+    { id: 'search', label: 'Search repositories', icon: 'search', shortcut: '/', category: 'Navigation' },
+    { id: 'refresh', label: 'Refresh repository list', icon: 'refresh', shortcut: 'F5', category: 'Navigation' },
+    { id: 'settings', label: 'Toggle settings panel', icon: 'settings', category: 'Navigation' },
+    { id: 'select-all', label: 'Select all visible repos', icon: 'selectAll', shortcut: 'Ctrl+A', category: 'Selection' },
+    { id: 'deselect-all', label: 'Deselect all repos', icon: 'deselectAll', shortcut: 'Ctrl+Shift+A', category: 'Selection' },
+    { id: 'bulk-public', label: 'Make selected repos public', icon: 'globe', category: 'Bulk Actions' },
+    { id: 'bulk-private', label: 'Make selected repos private', icon: 'lock', category: 'Bulk Actions' },
+    { id: 'bulk-archive', label: 'Archive selected repos', icon: 'archive', category: 'Bulk Actions' },
+    { id: 'bulk-delete', label: 'Delete selected repos', icon: 'trash', category: 'Bulk Actions' },
+    { id: 'export-json', label: 'Export repos as JSON', icon: 'fileJson', category: 'Export' },
+    { id: 'export-csv', label: 'Export repos as CSV', icon: 'download', category: 'Export' },
+    { id: 'filter-public', label: 'Show public repos only', icon: 'globe', category: 'Filters' },
+    { id: 'filter-private', label: 'Show private repos only', icon: 'lock', category: 'Filters' },
+    { id: 'filter-all', label: 'Show all repos', icon: 'layout', category: 'Filters' },
+    { id: 'sort-updated', label: 'Sort by last updated', icon: 'arrowUpDown', category: 'Sort' },
+    { id: 'sort-name', label: 'Sort by name', icon: 'arrowUpDown', category: 'Sort' },
+    { id: 'sort-stars', label: 'Sort by stars', icon: 'star', category: 'Sort' },
+  ];
+
+  registerCommands(commands, (cmdId) => {
+    switch (cmdId) {
+      case 'search':
+        document.getElementById('searchInput').focus();
+        break;
+      case 'refresh':
+        loadRepos();
+        break;
+      case 'settings':
+        toggleSettings();
+        break;
+      case 'select-all': {
+        const filtered = state.getFiltered();
+        state.selectAll(filtered.map((r) => r.full_name));
+        renderRepos();
+        updateBulkBar();
+        break;
+      }
+      case 'deselect-all':
+        state.deselectAll();
+        renderRepos();
+        updateBulkBar();
+        break;
+      case 'bulk-public':
+        handleBulkPublic();
+        break;
+      case 'bulk-private':
+        handleBulkPrivate();
+        break;
+      case 'bulk-archive':
+        handleBulkArchive();
+        break;
+      case 'bulk-delete':
+        handleBulkDelete();
+        break;
+      case 'export-json':
+        exportRepos('json');
+        break;
+      case 'export-csv':
+        exportRepos('csv');
+        break;
+      case 'filter-public':
+        document.getElementById('visibilityFilter').value = 'public';
+        state.set({ visibility: 'public' });
+        renderRepos();
+        break;
+      case 'filter-private':
+        document.getElementById('visibilityFilter').value = 'private';
+        state.set({ visibility: 'private' });
+        renderRepos();
+        break;
+      case 'filter-all':
+        document.getElementById('visibilityFilter').value = 'all';
+        state.set({ visibility: 'all' });
+        renderRepos();
+        break;
+      case 'sort-updated':
+        document.getElementById('sortFilter').value = 'updated';
+        state.set({ sort: 'updated' });
+        renderRepos();
+        break;
+      case 'sort-name':
+        document.getElementById('sortFilter').value = 'name';
+        state.set({ sort: 'name' });
+        renderRepos();
+        break;
+      case 'sort-stars':
+        document.getElementById('sortFilter').value = 'stars';
+        state.set({ sort: 'stars' });
+        renderRepos();
+        break;
+    }
+  });
+}
+
+function exportRepos(format) {
+  const repos = state.getFiltered();
+  if (repos.length === 0) {
+    showToast('No repos to export', 'warning');
+    return;
+  }
+
+  let content, filename, type;
+
+  if (format === 'json') {
+    const data = repos.map((r) => ({
+      name: r.name,
+      full_name: r.full_name,
+      description: r.description || '',
+      private: r.private,
+      fork: r.fork,
+      archived: r.archived,
+      language: r.language || '',
+      stars: r.stargazers_count,
+      forks: r.forks_count,
+      updated_at: r.updated_at,
+      html_url: r.html_url,
+    }));
+    content = JSON.stringify(data, null, 2);
+    filename = `forgehelm-repos-${Date.now()}.json`;
+    type = 'application/json';
+  } else {
+    const headers = ['Name', 'Full Name', 'Visibility', 'Language', 'Stars', 'Forks', 'Archived', 'Updated', 'URL'];
+    const rows = repos.map((r) => [
+      r.name, r.full_name, r.private ? 'Private' : 'Public',
+      r.language || '', r.stargazers_count, r.forks_count,
+      r.archived ? 'Yes' : 'No', r.updated_at, r.html_url,
+    ]);
+    content = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+    filename = `forgehelm-repos-${Date.now()}.csv`;
+    type = 'text/csv';
+  }
+
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${repos.length} repos as ${format.toUpperCase()}`, 'success');
 }
 
 function showSkeletons() {
@@ -127,13 +273,13 @@ async function handleSaveToken() {
   const t = input.value.trim();
 
   if (!t) {
-    statusEl.className = 'text-2xs px-2 py-1 rounded bg-fh-red/10 text-fh-red';
+    statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-red-subtle text-fh-red';
     statusEl.textContent = 'Please enter a token';
     statusEl.classList.remove('hidden');
     return;
   }
 
-  statusEl.className = 'text-2xs px-2 py-1 rounded bg-fh-accent/10 text-fh-accent flex items-center gap-1';
+  statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-accent-subtle text-fh-accent flex items-center gap-1';
   statusEl.innerHTML = `<span class="animate-spin-slow">${icon('loader', { size: 12 })}</span> Validating…`;
   statusEl.classList.remove('hidden');
 
@@ -142,14 +288,14 @@ async function handleSaveToken() {
   if (res.ok) {
     const user = res.data;
     state.set({ token: t, user });
-    statusEl.className = 'text-2xs px-2 py-1 rounded bg-fh-green/10 text-fh-green';
+    statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-green-subtle text-fh-green';
     statusEl.textContent = `Authenticated as @${user.login}`;
     showUserBadge(user);
     showToast(`Welcome, ${user.login}!`, 'success');
     setTimeout(() => toggleSettings(false), 800);
     loadRepos();
   } else {
-    statusEl.className = 'text-2xs px-2 py-1 rounded bg-fh-red/10 text-fh-red';
+    statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-red-subtle text-fh-red';
     statusEl.textContent = res.error || 'Invalid token';
     showToast('Token validation failed', 'error');
   }
@@ -247,8 +393,8 @@ async function handleDelete(fullName) {
   const repoName = fullName.split('/')[1];
   showModal({
     title: `Delete ${escapeHtml(repoName)}?`,
-    body: `<p class="text-fh-red">This action is <strong>permanent</strong> and cannot be undone.</p>
-           <p class="mt-1">All code, issues, PRs, and settings will be permanently deleted.</p>`,
+    body: `<p class="text-fh-red font-medium">This action is permanent and cannot be undone.</p>
+           <p class="mt-1.5 text-fh-text-muted">All code, issues, PRs, and settings will be permanently deleted.</p>`,
     confirmText: 'Delete this repository',
     confirmClass: 'fh-btn-danger',
     typed: repoName,
@@ -280,7 +426,6 @@ async function runBulkAction(actionName, actionFn, confirmOpts) {
     onConfirm: async () => {
       let done = 0;
       let failed = 0;
-      const errors = [];
 
       for (const fullName of targets) {
         state.markBusy(fullName);
@@ -292,7 +437,6 @@ async function runBulkAction(actionName, actionFn, confirmOpts) {
           done++;
         } catch (err) {
           failed++;
-          errors.push(`${fullName.split('/')[1]}: ${err.message}`);
         }
 
         state.unmarkBusy(fullName);
@@ -364,8 +508,8 @@ function handleBulkDelete() {
     state.removeRepo(fn);
   }, {
     title: `Delete ${count} repos permanently?`,
-    body: `<p class="text-fh-red"><strong>This cannot be undone.</strong></p>
-           <p class="mt-1">All code, issues, and settings for ${count} repos will be lost forever.</p>`,
+    body: `<p class="text-fh-red font-medium">This cannot be undone.</p>
+           <p class="mt-1.5 text-fh-text-muted">All code, issues, and settings for ${count} repos will be lost forever.</p>`,
     confirmText: `Delete ${count} repos`,
     confirmClass: 'fh-btn-danger',
     typed: `DELETE ${count}`,
@@ -379,6 +523,12 @@ function bindEvents() {
   document.getElementById('clearTokenBtn').addEventListener('click', handleClearToken);
   document.getElementById('tokenToggleBtn').addEventListener('click', toggleTokenVisibility);
   document.getElementById('refreshBtn').addEventListener('click', loadRepos);
+
+  const cmdPaletteBtn = document.getElementById('cmdPaletteBtn');
+  if (cmdPaletteBtn) cmdPaletteBtn.addEventListener('click', openPalette);
+
+  const cmdPaletteHint = document.getElementById('cmdPaletteHint');
+  if (cmdPaletteHint) cmdPaletteHint.addEventListener('click', openPalette);
 
   document.getElementById('tokenInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSaveToken();
@@ -460,11 +610,20 @@ function bindEvents() {
   document.getElementById('bulkDeleteBtn').addEventListener('click', handleBulkDelete);
 
   document.addEventListener('keydown', (e) => {
+    if (isPaletteOpen()) return;
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openPalette();
+      return;
+    }
+
     if (e.key === '/' && !e.target.closest('input, textarea')) {
       e.preventDefault();
       document.getElementById('searchInput').focus();
     }
-    if (e.ctrlKey && e.key === 'a' && !e.target.closest('input, textarea')) {
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !e.target.closest('input, textarea')) {
       e.preventDefault();
       if (e.shiftKey) {
         state.deselectAll();
@@ -475,11 +634,23 @@ function bindEvents() {
       renderRepos();
       updateBulkBar();
     }
+
+    if (e.key === 'Escape') {
+      const s = state.get();
+      if (s.settingsOpen) {
+        toggleSettings(false);
+      } else if (s.selected.size > 0) {
+        state.deselectAll();
+        renderRepos();
+        updateBulkBar();
+      }
+    }
   });
 }
 
 async function init() {
   injectIcons();
+  initCommandPalette();
   bindEvents();
 
   const tokenRes = await send('GET_TOKEN');

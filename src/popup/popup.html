@@ -11,28 +11,30 @@
 </head>
 <body class="bg-fh-bg text-fh-text font-sans flex flex-col h-screen overflow-hidden">
 
-  <!-- Header -->
-  <header class="flex items-center justify-between px-4 py-2.5 border-b border-fh-border bg-fh-surface shrink-0">
+  <header class="flex items-center justify-between px-4 py-2.5 border-b border-fh-border bg-fh-surface shrink-0" role="banner">
     <div class="flex items-center gap-2">
       <span id="headerIcon" class="text-fh-green"></span>
       <h1 class="text-sm font-semibold tracking-tight">ForgeHelm</h1>
+      <span class="fh-badge border-fh-accent/20 bg-fh-accent-subtle text-fh-accent text-2xs">v1.0</span>
     </div>
     <div class="flex items-center gap-1">
-      <span id="userBadge" class="hidden items-center gap-1 px-2 py-0.5 text-2xs font-medium rounded-full bg-fh-overlay border border-fh-border text-fh-text-secondary">
-        <img id="userAvatar" class="w-4 h-4 rounded-full" src="" alt="">
+      <span id="userBadge" class="hidden items-center gap-1.5 px-2 py-0.5 text-2xs font-medium rounded-full bg-fh-overlay border border-fh-border text-fh-text-secondary">
+        <img id="userAvatar" class="w-4 h-4 rounded-full ring-1 ring-fh-border" src="" alt="User avatar">
         <span id="userName"></span>
       </span>
-      <button id="rateLimitBtn" class="fh-btn-icon hidden" title="API Rate Limit">
+      <button id="rateLimitBtn" class="fh-btn-icon hidden" title="API Rate Limit" aria-label="View API rate limit">
         <span id="rateLimitIcon"></span>
       </button>
-      <button id="settingsBtn" class="fh-btn-icon" title="Settings">
+      <button id="cmdPaletteBtn" class="fh-btn-icon" title="Command Palette (Ctrl+K)" aria-label="Open command palette">
+        <span id="cmdPaletteIcon"></span>
+      </button>
+      <button id="settingsBtn" class="fh-btn-icon" title="Settings" aria-label="Open settings">
         <span id="settingsIcon"></span>
       </button>
     </div>
   </header>
 
-  <!-- Settings Panel -->
-  <div id="settingsPanel" class="hidden border-b border-fh-border bg-fh-surface shrink-0 animate-slide-down">
+  <div id="settingsPanel" class="hidden border-b border-fh-border bg-fh-surface shrink-0 animate-slide-down" role="region" aria-label="Token configuration">
     <div class="px-4 py-3 space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-fh-text-secondary">Token Configuration</h2>
@@ -43,12 +45,14 @@
       </div>
       <div class="relative">
         <input id="tokenInput" type="password" placeholder="ghp_xxxx or github_pat_xxxx"
-               class="fh-input pr-10 font-mono text-xs" autocomplete="off" spellcheck="false">
-        <button id="tokenToggleBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-fh-text-muted hover:text-fh-text transition-colors">
+               class="fh-input pr-10 font-mono text-xs" autocomplete="off" spellcheck="false"
+               aria-label="GitHub Personal Access Token">
+        <button id="tokenToggleBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-fh-text-muted hover:text-fh-text transition-colors p-1 rounded"
+                aria-label="Toggle token visibility">
           <span id="tokenToggleIcon"></span>
         </button>
       </div>
-      <div id="tokenStatus" class="hidden text-2xs px-2 py-1 rounded"></div>
+      <div id="tokenStatus" class="hidden text-2xs px-2.5 py-1.5 rounded-lg" role="status" aria-live="polite"></div>
       <div class="flex gap-2">
         <button id="saveTokenBtn" class="fh-btn-primary flex-1">Save Token</button>
         <button id="clearTokenBtn" class="fh-btn-secondary">Clear</button>
@@ -56,44 +60,46 @@
     </div>
   </div>
 
-  <!-- Global Progress -->
-  <div id="globalProgress" class="hidden shrink-0">
+  <div id="globalProgress" class="hidden shrink-0" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Operation progress">
     <div class="px-4 py-2 bg-fh-surface border-b border-fh-border">
-      <div class="flex items-center justify-between mb-1">
-        <span id="progressLabel" class="text-2xs text-fh-text-secondary"></span>
+      <div class="flex items-center justify-between mb-1.5">
+        <span id="progressLabel" class="text-2xs text-fh-text-secondary font-medium"></span>
         <span id="progressCount" class="text-2xs font-mono text-fh-accent"></span>
       </div>
-      <div class="h-1.5 bg-fh-overlay rounded-full overflow-hidden">
-        <div id="progressBar" class="h-full bg-fh-accent rounded-full transition-all duration-300" style="width: 0%"></div>
+      <div class="fh-progress-bar fh-progress-striped">
+        <div id="progressBar" class="fh-progress-fill" style="width: 0%"></div>
       </div>
     </div>
   </div>
 
-  <!-- Toolbar -->
-  <div class="px-4 py-2 border-b border-fh-border bg-fh-surface shrink-0 space-y-2">
+  <div class="px-4 py-2 border-b border-fh-border bg-fh-surface shrink-0 space-y-2" role="toolbar" aria-label="Repository filters">
     <div class="flex items-center gap-2">
       <div class="relative flex-1">
-        <span id="searchIcon" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fh-text-muted"></span>
+        <span id="searchIcon" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fh-text-muted pointer-events-none"></span>
         <input id="searchInput" type="text" placeholder="Search repos…"
-               class="fh-input pl-8 text-xs" autocomplete="off">
+               class="fh-input pl-8 pr-16 text-xs" autocomplete="off"
+               aria-label="Search repositories">
+        <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
+          <kbd class="fh-kbd">/</kbd>
+        </div>
       </div>
-      <button id="refreshBtn" class="fh-btn-icon" title="Refresh repos">
+      <button id="refreshBtn" class="fh-btn-icon" title="Refresh repos" aria-label="Refresh repository list">
         <span id="refreshIcon"></span>
       </button>
     </div>
     <div class="flex items-center gap-2">
-      <select id="visibilityFilter" class="fh-select text-xs flex-1">
+      <select id="visibilityFilter" class="fh-select text-xs flex-1" aria-label="Filter by visibility">
         <option value="all">All</option>
         <option value="public">Public</option>
         <option value="private">Private</option>
       </select>
-      <select id="typeFilter" class="fh-select text-xs flex-1">
+      <select id="typeFilter" class="fh-select text-xs flex-1" aria-label="Filter by type">
         <option value="all">All types</option>
         <option value="source">Sources</option>
         <option value="fork">Forks</option>
         <option value="archived">Archived</option>
       </select>
-      <select id="sortFilter" class="fh-select text-xs flex-1">
+      <select id="sortFilter" class="fh-select text-xs flex-1" aria-label="Sort repositories">
         <option value="updated">Updated</option>
         <option value="name">Name A→Z</option>
         <option value="stars">Stars</option>
@@ -102,66 +108,70 @@
       </select>
     </div>
     <div class="flex items-center justify-between">
-      <span id="repoCount" class="text-2xs text-fh-text-muted">0 repos</span>
-      <div id="rateLimitInfo" class="hidden text-2xs text-fh-text-muted font-mono"></div>
+      <span id="repoCount" class="text-2xs text-fh-text-muted font-medium" aria-live="polite">0 repos</span>
+      <div class="flex items-center gap-2">
+        <div id="rateLimitInfo" class="hidden text-2xs text-fh-text-muted font-mono"></div>
+        <button id="cmdPaletteHint" class="flex items-center gap-1 text-2xs text-fh-text-muted hover:text-fh-text-secondary transition-colors cursor-pointer"
+                aria-label="Open command palette">
+          <kbd class="fh-kbd">Ctrl</kbd><kbd class="fh-kbd">K</kbd>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Bulk Action Bar -->
-  <div id="bulkBar" class="hidden px-4 py-2 border-b border-fh-accent/30 bg-fh-accent/5 shrink-0 animate-slide-down">
+  <div id="bulkBar" class="hidden px-4 py-2 border-b border-fh-accent/20 bg-fh-accent-subtle shrink-0 animate-slide-down" role="toolbar" aria-label="Bulk actions">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <span id="selectedCount" class="text-xs font-medium text-fh-accent"></span>
-        <button id="selectAllBtn" class="fh-btn-ghost text-2xs">Select all</button>
-        <button id="deselectAllBtn" class="fh-btn-ghost text-2xs">Clear</button>
+        <span id="selectedCount" class="text-xs font-semibold text-fh-accent" aria-live="polite"></span>
+        <button id="selectAllBtn" class="fh-btn-ghost text-2xs" aria-label="Select all visible repositories">Select all</button>
+        <button id="deselectAllBtn" class="fh-btn-ghost text-2xs" aria-label="Deselect all repositories">Clear</button>
       </div>
       <div class="flex items-center gap-1">
-        <button id="bulkPublicBtn" class="fh-btn-secondary text-2xs" title="Make Public">
+        <button id="bulkPublicBtn" class="fh-btn-secondary text-2xs" title="Make Public" aria-label="Make selected repositories public">
           <span id="bulkPublicIcon"></span> Public
         </button>
-        <button id="bulkPrivateBtn" class="fh-btn-secondary text-2xs" title="Make Private">
+        <button id="bulkPrivateBtn" class="fh-btn-secondary text-2xs" title="Make Private" aria-label="Make selected repositories private">
           <span id="bulkPrivateIcon"></span> Private
         </button>
-        <button id="bulkArchiveBtn" class="fh-btn-secondary text-2xs" title="Archive">
+        <button id="bulkArchiveBtn" class="fh-btn-secondary text-2xs" title="Archive" aria-label="Archive selected repositories">
           <span id="bulkArchiveIcon"></span>
         </button>
-        <button id="bulkDeleteBtn" class="fh-btn-danger text-2xs" title="Delete">
+        <button id="bulkDeleteBtn" class="fh-btn-danger text-2xs" title="Delete" aria-label="Delete selected repositories">
           <span id="bulkDeleteIcon"></span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Repo List -->
-  <div id="repoList" class="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
-    <!-- Repos rendered here by renderer.js -->
+  <div id="repoList" class="flex-1 overflow-y-auto px-3 py-2 space-y-1.5" role="list" aria-label="Repository list"></div>
+
+  <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center px-8 text-center" role="status">
+    <div id="emptyIcon" class="text-fh-text-muted mb-4"></div>
+    <p id="emptyTitle" class="text-sm font-semibold text-fh-text-secondary mb-1"></p>
+    <p id="emptyDesc" class="text-xs text-fh-text-muted leading-relaxed"></p>
   </div>
 
-  <!-- Empty State -->
-  <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center px-8 text-center">
-    <div id="emptyIcon" class="text-fh-text-muted mb-3"></div>
-    <p id="emptyTitle" class="text-sm font-medium text-fh-text-secondary mb-1"></p>
-    <p id="emptyDesc" class="text-xs text-fh-text-muted"></p>
+  <div id="skeletonList" class="hidden flex-1 overflow-hidden px-3 py-2 space-y-1.5" aria-hidden="true">
+    <div class="fh-card p-3 space-y-2.5"><div class="fh-skeleton h-4 w-3/4"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-1/2"></div></div>
+    <div class="fh-card p-3 space-y-2.5"><div class="fh-skeleton h-4 w-2/3"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-2/5"></div></div>
+    <div class="fh-card p-3 space-y-2.5"><div class="fh-skeleton h-4 w-4/5"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-3/5"></div></div>
+    <div class="fh-card p-3 space-y-2.5"><div class="fh-skeleton h-4 w-1/2"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-1/3"></div></div>
+    <div class="fh-card p-3 space-y-2.5"><div class="fh-skeleton h-4 w-3/5"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-2/5"></div></div>
   </div>
 
-  <!-- Loading Skeletons -->
-  <div id="skeletonList" class="hidden flex-1 overflow-hidden px-3 py-2 space-y-1.5">
-    <div class="fh-card p-3 space-y-2"><div class="fh-skeleton h-4 w-3/4"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-1/2"></div></div>
-    <div class="fh-card p-3 space-y-2"><div class="fh-skeleton h-4 w-2/3"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-2/5"></div></div>
-    <div class="fh-card p-3 space-y-2"><div class="fh-skeleton h-4 w-4/5"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-3/5"></div></div>
-    <div class="fh-card p-3 space-y-2"><div class="fh-skeleton h-4 w-1/2"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-1/3"></div></div>
-    <div class="fh-card p-3 space-y-2"><div class="fh-skeleton h-4 w-3/5"></div><div class="fh-skeleton h-3 w-full"></div><div class="fh-skeleton h-3 w-2/5"></div></div>
-  </div>
+  <div id="toastContainer" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center pointer-events-none" aria-live="polite" aria-relevant="additions"></div>
 
-  <!-- Toast Container -->
-  <div id="toastContainer" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center pointer-events-none"></div>
+  <div id="modalOverlay" class="hidden fixed inset-0 z-40" aria-hidden="true"></div>
 
-  <!-- Modal Overlay -->
-  <div id="modalOverlay" class="hidden fixed inset-0 z-40"></div>
+  <div id="commandPaletteRoot" aria-hidden="true"></div>
 
-  <!-- Footer -->
-  <footer class="px-4 py-1.5 border-t border-fh-border bg-fh-surface text-center shrink-0">
-    <span class="text-2xs text-fh-text-muted">ForgeHelm v1.0.0</span>
+  <footer class="px-4 py-1.5 border-t border-fh-border bg-fh-surface text-center shrink-0" role="contentinfo">
+    <div class="flex items-center justify-center gap-2">
+      <span class="text-2xs text-fh-text-muted">ForgeHelm v1.0.0</span>
+      <span class="text-fh-border">·</span>
+      <a href="https://github.com/ThanhNguyxn07/ForgeHelm" target="_blank" rel="noopener"
+         class="text-2xs text-fh-text-muted hover:text-fh-accent transition-colors" aria-label="View on GitHub">GitHub</a>
+    </div>
   </footer>
 
   <script type="module" src="app.js"></script>
