@@ -19,13 +19,14 @@ export function openPalette() {
   paletteRoot = document.getElementById('commandPaletteRoot');
   if (!paletteRoot) return;
   paletteRoot.setAttribute('aria-hidden', 'false');
+  paletteRoot.innerHTML = '';
 
   backdropEl = document.createElement('div');
   backdropEl.className = 'fh-palette-backdrop animate-fade-in';
   backdropEl.addEventListener('click', closePalette);
 
   paletteEl = document.createElement('div');
-  paletteEl.className = 'fh-palette animate-scale-in';
+  paletteEl.className = 'fh-palette fh-palette-enter';
   paletteEl.setAttribute('role', 'dialog');
   paletteEl.setAttribute('aria-label', 'Command palette');
 
@@ -62,14 +63,16 @@ export function openPalette() {
 
   requestAnimationFrame(() => input.focus());
 
-  input.addEventListener('input', () => {
+  const onInput = () => {
     const q = input.value.toLowerCase().trim();
     filteredCommands = q
       ? allCommands.filter((c) => fuzzyMatch(q, c.label.toLowerCase()) || (c.category && c.category.toLowerCase().includes(q)))
       : [...allCommands];
     activeIndex = 0;
     renderList(list);
-  });
+  };
+
+  input.addEventListener('input', onInput);
 
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') {
@@ -92,6 +95,8 @@ export function openPalette() {
     }
   });
 
+  onInput();
+
   document.addEventListener('keydown', handleGlobalEsc);
 }
 
@@ -99,7 +104,7 @@ export function closePalette() {
   if (!paletteEl) return;
 
   paletteEl.style.opacity = '0';
-  paletteEl.style.transform = 'translate(-50%, 0) scale(0.97)';
+  paletteEl.style.transform = 'translateX(-50%) scale(0.97)';
   paletteEl.style.transition = 'all 0.15s ease-in';
 
   if (backdropEl) {
@@ -110,7 +115,11 @@ export function closePalette() {
   setTimeout(() => {
     if (backdropEl) { backdropEl.remove(); backdropEl = null; }
     if (paletteEl) { paletteEl.remove(); paletteEl = null; }
-    if (paletteRoot) paletteRoot.setAttribute('aria-hidden', 'true');
+    if (paletteRoot) {
+      paletteRoot.setAttribute('aria-hidden', 'true');
+      paletteRoot.innerHTML = '';
+      paletteRoot = null;
+    }
   }, 150);
 
   document.removeEventListener('keydown', handleGlobalEsc);
@@ -155,7 +164,7 @@ function renderList(listEl) {
 
     const isActive = i === activeIndex;
     const shortcutHtml = cmd.shortcut
-      ? `<span class="ml-auto flex items-center gap-0.5">${cmd.shortcut.split('+').map((k) => `<kbd class="fh-kbd">${escHtml(k)}</kbd>`).join('')}</span>`
+      ? `<span class="fh-palette-shortcut">${cmd.shortcut.split('+').map((k) => `<kbd class="fh-kbd">${escHtml(k)}</kbd>`).join('')}</span>`
       : '';
 
     const iconHtml = cmd.icon
@@ -164,7 +173,7 @@ function renderList(listEl) {
 
     html += `<div class="fh-palette-item" data-active="${isActive}" data-index="${i}" role="option" aria-selected="${isActive}">
       ${iconHtml}
-      <span class="flex-1 truncate">${escHtml(cmd.label)}</span>
+      <span class="fh-palette-label">${escHtml(cmd.label)}</span>
       ${shortcutHtml}
     </div>`;
   }
