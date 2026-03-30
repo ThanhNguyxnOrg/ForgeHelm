@@ -62,12 +62,13 @@ Managing dozens (or hundreds) of GitHub repositories is painful. Changing visibi
 
 ### 🛡️ Safety & Security
 
-- 🔐 **Fine-grained PAT support** — minimal permissions, maximum safety
+- 🔐 **Fine-grained & Classic PAT support** — choose your preferred token type
 - ⚠️ **Typed confirmation** for destructive actions (delete, transfer)
 - 🚫 **Busy-lock system** — prevents double-actions on in-progress repos
 - 📊 **Rate limit monitoring** — real-time GitHub API quota tracking
 - 🔒 **Token stored locally** — never sent anywhere except `api.github.com`
 - ♻️ **Retry with exponential backoff** on rate limits
+- 🔍 **Smart error detection** — distinguishes rate limits from permission errors
 
 ### 🎨 User Experience
 
@@ -105,7 +106,10 @@ npm run build
 
 ### 🔑 Setting Up Your GitHub Token
 
-ForgeHelm uses a **Fine-Grained Personal Access Token** for maximum security:
+ForgeHelm supports both **Fine-Grained** and **Classic** Personal Access Tokens. Fine-grained tokens are recommended for maximum security.
+
+<details>
+<summary>🔑 <b>Option A — Fine-Grained PAT</b> (Recommended)</summary>
 
 1. Go to [GitHub Settings → Developer Settings → Fine-grained tokens](https://github.com/settings/tokens?type=beta)
 2. Click **"Generate new token"**
@@ -114,8 +118,28 @@ ForgeHelm uses a **Fine-Grained Personal Access Token** for maximum security:
    - **Expiration**: 90 days (recommended)
    - **Repository access**: All repositories
    - **Permissions** — see the table below for what each feature requires
+4. Click **Generate token** and paste it into ForgeHelm
+
+</details>
+
+<details>
+<summary>🔑 <b>Option B — Classic PAT</b></summary>
+
+1. Go to [GitHub Settings → Developer Settings → Personal access tokens (classic)](https://github.com/settings/tokens)
+2. Click **"Generate new token (classic)"**
+3. Select scopes:
+
+| Scope | Required For |
+|-------|-------------|
+| `repo` | All read/write operations (visibility, archive, edit, transfer, fork, topics) |
+| `delete_repo` | Deleting repositories |
+| `read:org` | Listing organization repos (optional) |
 
 4. Click **Generate token** and paste it into ForgeHelm
+
+> ⚠️ Classic tokens (`ghp_*`) grant access to **all** your repositories. Use fine-grained tokens for scoped access.
+
+</details>
 
 #### 🔐 Required Permissions by Feature
 
@@ -250,6 +274,26 @@ sequenceDiagram
     P->>P: state.set() → renderRepos()
 ```
 
+### Token Persistence (MV3)
+
+```mermaid
+sequenceDiagram
+    participant P as Popup (app.js)
+    participant SW as Service Worker
+    participant S as chrome.storage
+    participant API as GitHub API
+
+    Note over SW: Service Worker restarts (MV3 lifecycle)
+    P->>SW: sendMessage({ type: 'DELETE_REPO' })
+    SW->>SW: ensureToken()
+    SW->>S: getToken()
+    S-->>SW: token
+    SW->>SW: github.setToken(token)
+    SW->>API: DELETE /repos/{owner}/{repo}
+    API-->>SW: 204 No Content
+    SW-->>P: { ok: true, data: true }
+```
+
 ### File Structure
 
 ```
@@ -346,6 +390,70 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feat/amazing-feature`)
 5. Open a Pull Request
+
+---
+
+## ❓ Troubleshooting
+
+<details>
+<summary>🔴 <b>"Resource not accessible by personal access token"</b></summary>
+
+Your token lacks the required permissions for the operation you're trying to perform.
+
+**Fine-Grained PAT fix:**
+1. Go to [GitHub Settings → Fine-grained tokens](https://github.com/settings/tokens?type=beta)
+2. Edit your token → **Permissions** → Set `Administration` to **Read & Write**
+3. Regenerate and paste the new token into ForgeHelm
+
+**Classic PAT fix:**
+1. Go to [GitHub Settings → Tokens (classic)](https://github.com/settings/tokens)
+2. Edit your token → Enable `repo` scope + `delete_repo` scope
+3. Save and re-enter the token in ForgeHelm
+
+> 💡 ForgeHelm will tell you exactly which permission is missing when this error occurs.
+
+</details>
+
+<details>
+<summary>🔴 <b>Delete shows "deleted" but repo still exists</b></summary>
+
+This happens when the token lacks `delete_repo` (classic) or `Administration: Write` (fine-grained) permission. The delete was queued with a 30-second undo window, but the actual API call failed silently.
+
+**Fix:** Update your token permissions (see above), then retry the delete.
+
+</details>
+
+<details>
+<summary>🔴 <b>CI status badges not loading</b></summary>
+
+CI status requires the `Actions: Read` permission on your fine-grained PAT. For classic PATs, the `repo` scope covers this.
+
+If badges still don't appear, the repository may not have any GitHub Actions workflow runs.
+
+</details>
+
+<details>
+<summary>🟡 <b>Operations work after page load but fail later</b></summary>
+
+Chrome Extension service workers (Manifest V3) restart periodically. ForgeHelm automatically reloads your token from storage on each API call, so this should be transparent. If you're still seeing issues:
+
+1. Open `chrome://extensions` → ForgeHelm → **Service Worker** → click "Inspect"
+2. Check the Console for error messages
+3. Try refreshing the repo list (click the refresh button)
+
+</details>
+
+<details>
+<summary>🟡 <b>Rate limit errors (403 / 429)</b></summary>
+
+GitHub allows 5,000 API requests per hour for authenticated users. ForgeHelm automatically retries on rate limits with exponential backoff.
+
+Check your remaining quota via the **rate limit indicator** in the toolbar (shield icon). If you're frequently hitting limits:
+- Use filters to reduce the number of repos loaded
+- Avoid rapid bulk operations on large repo lists
+- Wait for the reset time shown in the rate limit dashboard
+
+</details>
 
 ---
 
