@@ -345,8 +345,26 @@ async function handleSaveToken() {
   if (res.ok) {
     const user = res.data;
     state.set({ token: t, user });
+    const caps = await send('CHECK_TOKEN_CAPABILITIES', { token: t });
+
     statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-green-subtle text-fh-green';
-    statusEl.textContent = `Authenticated as @${user.login}`;
+    if (caps.ok) {
+      const capData = caps.data;
+      const missing = [];
+      if (!capData.scopes.repo) missing.push('repo');
+      if (!capData.scopes.delete_repo) missing.push('delete_repo');
+
+      if (missing.length > 0) {
+        statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-yellow-subtle text-fh-yellow';
+        statusEl.textContent = `Authenticated as @${user.login}. Missing scope(s): ${missing.join(', ')}`;
+        showToast(`Token warning: missing ${missing.join(', ')}`, 'warning');
+      } else {
+        statusEl.textContent = `Authenticated as @${user.login} · scope check passed (repo + delete_repo)`;
+      }
+    } else {
+      statusEl.textContent = `Authenticated as @${user.login} (scope check unavailable)`;
+    }
+
     showUserBadge(user);
     showToast(`Welcome, ${user.login}!`, 'success');
     setTimeout(() => toggleSettings(false), 800);

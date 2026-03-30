@@ -2,6 +2,7 @@ import { logger } from './logger.js';
 
 const ALLOWED_TYPES = new Set([
   'VALIDATE_TOKEN',
+  'CHECK_TOKEN_CAPABILITIES',
   'FETCH_REPOS',
   'UPDATE_REPO',
   'DELETE_REPO',

@@ -20,6 +20,11 @@ router.register('VALIDATE_TOKEN', async ({ token }) => {
   return user;
 });
 
+router.register('CHECK_TOKEN_CAPABILITIES', async ({ token }) => {
+  if (!token) throw new TokenError('No token provided for capability check.');
+  return github.checkTokenCapabilities(token);
+});
+
 router.register('GET_TOKEN', async () => {
   const token = await storage.getToken();
   return { token };

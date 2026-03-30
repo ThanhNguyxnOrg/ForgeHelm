@@ -101,6 +101,53 @@ class GitHubClient {
     }
   }
 
+  async checkTokenCapabilities(testToken) {
+    const prev = this.token;
+    this.token = testToken;
+
+    const result = {
+      tokenType: testToken.startsWith('ghp_') ? 'classic' : (testToken.startsWith('github_pat_') ? 'fine-grained' : 'unknown'),
+      scopes: {
+        repo: false,
+        delete_repo: false,
+      },
+      hints: [],
+    };
+
+    try {
+      const userRes = await this.request('/user', {}, 0);
+      const scopeHeader = userRes.headers.get('X-OAuth-Scopes') || '';
+      const scopeSet = new Set(
+        scopeHeader
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      );
+
+      // Classic PAT scope introspection is available through X-OAuth-Scopes.
+      // Fine-grained PATs may not expose scopes in the same way, so we keep this conservative.
+      result.scopes.repo = scopeSet.has('repo') || scopeSet.has('public_repo');
+      result.scopes.delete_repo = scopeSet.has('delete_repo');
+
+      if (!result.scopes.repo) {
+        result.hints.push('Missing scope: repo');
+      }
+      if (!result.scopes.delete_repo) {
+        result.hints.push('Missing scope: delete_repo (required for delete operations)');
+      }
+
+      if (result.tokenType === 'classic' && result.scopes.repo && result.scopes.delete_repo) {
+        result.hints.push('Classic PAT check passed: repo + delete_repo detected.');
+      }
+
+      return result;
+    } catch (err) {
+      throw new TokenError(`Token capability check failed: ${err.message}`);
+    } finally {
+      this.token = prev;
+    }
+  }
+
   async fetchAllRepos(signal) {
     const repos = [];
     let page = 1;

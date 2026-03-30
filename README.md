@@ -114,6 +114,15 @@ ForgeHelm is optimized for **Personal Access Token (classic)** flow, matching th
 4. Enable scopes below
 5. Generate token and paste it into ForgeHelm
 
+#### 🧪 Built-in Token Check (Test Key)
+
+After you click **Save Token**, ForgeHelm now runs a capability preflight:
+- Validates authentication (`/user`)
+- Checks detected classic scopes from `X-OAuth-Scopes`
+- Reports missing critical scopes (`repo`, `delete_repo`) before destructive actions
+
+If the checker says a scope is missing, regenerate your classic PAT with the required scopes and save again.
+
 #### ✅ Classic PAT Scopes (Recommended)
 
 | Scope | Why it is needed |
