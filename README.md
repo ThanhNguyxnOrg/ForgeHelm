@@ -212,6 +212,46 @@ Each destructive action requires explicit confirmation:
 
 ## 🏗️ Architecture
 
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Chrome Extension
+        A[Popup UI<br/>app.js + renderer.js] -->|chrome.runtime<br/>.sendMessage| B[Service Worker<br/>service-worker.js]
+        C[Content Script<br/>launcher.js] -->|chrome.runtime<br/>.sendMessage| B
+        A --> D[State Manager<br/>state.js]
+        A --> E[Components<br/>modal · toast · palette]
+    end
+
+    B -->|fetch| F[GitHub REST API<br/>api.github.com]
+    B -->|chrome.storage| G[Local Storage<br/>Token + Settings]
+
+    style A fill:#58a6ff,color:#0d1117
+    style B fill:#3fb950,color:#0d1117
+    style F fill:#f85149,color:#0d1117
+    style G fill:#d2a622,color:#0d1117
+```
+
+### Message Flow
+
+```mermaid
+sequenceDiagram
+    participant P as Popup (app.js)
+    participant SW as Service Worker
+    participant API as GitHub API
+    participant S as chrome.storage
+
+    P->>SW: sendMessage({ type: 'FETCH_REPOS' })
+    SW->>S: getToken()
+    S-->>SW: token
+    SW->>API: GET /user/repos (Bearer token)
+    API-->>SW: repos[]
+    SW-->>P: { ok: true, data: repos[] }
+    P->>P: state.set() → renderRepos()
+```
+
+### File Structure
+
 ```
 ForgeHelm/
 ├── src/

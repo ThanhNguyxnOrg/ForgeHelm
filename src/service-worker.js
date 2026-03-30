@@ -69,6 +69,14 @@ router.register('UPDATE_TOPICS', async ({ fullName, topics }) => {
 });
 
 router.register('GET_RATE_LIMIT', async () => {
+  try {
+    const fresh = await github.fetchRateLimit();
+    if (fresh?.rate) {
+      return { remaining: fresh.rate.remaining, limit: fresh.rate.limit, reset: fresh.rate.reset };
+    }
+  } catch (_) {
+    // Fall back to cached if API call fails
+  }
   return github.getRateLimit();
 });
 
