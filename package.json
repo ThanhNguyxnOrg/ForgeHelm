@@ -1,0 +1,17 @@
+{
+  "name": "forgehelm",
+  "version": "1.0.0",
+  "description": "A powerful Chrome Extension for bulk GitHub repository management",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --watch",
+    "dev": "npm run watch:css",
+    "build": "npm run build:css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "author": "ThanhNguyxn07",
+  "license": "MIT"
+}
