@@ -77,6 +77,10 @@ router.register('SAVE_SETTINGS', async ({ settings }) => {
   return true;
 });
 
+router.register('GET_CI_STATUS', async ({ fullName }) => {
+  return github.getCiStatus(fullName);
+});
+
 router.register('EXPORT_REPOS', async () => {
   const token = await storage.getToken();
   if (!token) return [];

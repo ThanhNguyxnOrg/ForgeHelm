@@ -5,6 +5,60 @@
 @tailwind utilities;
 
 @layer base {
+
+  /* ── Theme variables ── */
+
+  :root,
+  [data-theme="dark"] {
+    --fh-bg: 13 17 23;
+    --fh-surface: 22 27 34;
+    --fh-elevated: 28 33 40;
+    --fh-overlay: 33 38 45;
+    --fh-muted: 48 54 61;
+    --fh-border: 48 54 61;
+    --fh-border-hover: 72 79 88;
+    --fh-text: 230 237 243;
+    --fh-text-secondary: 139 148 158;
+    --fh-text-muted: 110 118 129;
+    --fh-accent: 88 166 255;
+    --fh-accent-emphasis: 56 139 253;
+    --fh-green: 63 185 80;
+    --fh-green-muted: 35 134 54;
+    --fh-red: 248 81 73;
+    --fh-red-muted: 218 54 51;
+    --fh-purple: 188 140 255;
+    --fh-yellow: 210 153 34;
+    --fh-orange: 219 109 40;
+    --fh-cyan: 57 210 192;
+    --fh-pink: 247 120 186;
+    color-scheme: dark;
+  }
+
+  [data-theme="light"] {
+    --fh-bg: 255 255 255;
+    --fh-surface: 246 248 250;
+    --fh-elevated: 255 255 255;
+    --fh-overlay: 234 238 242;
+    --fh-muted: 209 213 219;
+    --fh-border: 208 215 222;
+    --fh-border-hover: 175 184 193;
+    --fh-text: 31 35 40;
+    --fh-text-secondary: 101 109 118;
+    --fh-text-muted: 139 148 158;
+    --fh-accent: 9 105 218;
+    --fh-accent-emphasis: 5 80 174;
+    --fh-green: 26 127 55;
+    --fh-green-muted: 45 164 78;
+    --fh-red: 207 34 46;
+    --fh-red-muted: 164 14 38;
+    --fh-purple: 130 80 223;
+    --fh-yellow: 154 103 0;
+    --fh-orange: 188 76 0;
+    --fh-cyan: 9 105 218;
+    --fh-pink: 191 57 137;
+    color-scheme: light;
+  }
+
   *,
   *::before,
   *::after {
@@ -31,12 +85,12 @@
 
   ::-webkit-scrollbar-thumb {
     @apply rounded-full;
-    background: rgba(139, 148, 158, 0.25);
+    background: rgb(var(--fh-text-muted) / 0.25);
     transition: background 0.2s;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 148, 158, 0.45);
+    background: rgb(var(--fh-text-muted) / 0.45);
   }
 
   /* Focus visible for keyboard nav only */
@@ -134,10 +188,19 @@
            hover:border-fh-border-hover hover:bg-fh-elevated
            hover:shadow-fh-md
            cursor-pointer;
+    /* Chrome-native virtual rendering — skip offscreen cards */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 85px;
   }
 
   .fh-card-selected {
     @apply border-fh-accent/40 bg-fh-accent-subtle shadow-fh-glow;
+  }
+
+  .fh-card-pending-delete {
+    @apply opacity-50 pointer-events-none;
+    text-decoration: line-through;
+    text-decoration-color: rgb(var(--fh-red) / 0.4);
   }
 
   /* ── Glass surfaces ── */
@@ -178,7 +241,11 @@
 
   .fh-skeleton {
     @apply rounded-md;
-    background: linear-gradient(90deg, #21262d 25%, #2d333b 37%, #21262d 63%);
+    background: linear-gradient(90deg,
+      rgb(var(--fh-overlay)) 25%,
+      rgb(var(--fh-muted) / 0.5) 37%,
+      rgb(var(--fh-overlay)) 63%
+    );
     background-size: 400% 100%;
     animation: shimmer 1.5s ease-in-out infinite;
   }
@@ -205,6 +272,20 @@
     backdrop-filter: blur(6px);
   }
 
+  /* ── Modal stripe indicators ── */
+
+  .fh-stripe-accent {
+    height: 0.25rem;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: linear-gradient(90deg, rgb(var(--fh-accent-emphasis)), rgb(var(--fh-purple)));
+  }
+
+  .fh-stripe-danger {
+    height: 0.25rem;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: linear-gradient(90deg, rgb(var(--fh-red-muted)), rgb(var(--fh-orange)));
+  }
+
   /* ── Kbd shortcuts ── */
 
   .fh-kbd {
@@ -222,7 +303,11 @@
 
   .fh-progress-fill {
     @apply h-full rounded-full transition-all duration-300 ease-out;
-    background: linear-gradient(90deg, #238636, #3fb950, #58a6ff);
+    background: linear-gradient(90deg,
+      rgb(var(--fh-green-muted)),
+      rgb(var(--fh-green)),
+      rgb(var(--fh-accent))
+    );
   }
 
   .fh-progress-striped .fh-progress-fill {
@@ -301,6 +386,38 @@
   .fh-status-dot {
     @apply w-1.5 h-1.5 rounded-full;
   }
+
+  /* ── Undo toast ── */
+
+  .fh-undo-toast {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl border shadow-fh-lg
+           text-xs text-fh-text pointer-events-auto backdrop-blur-md
+           bg-fh-red-muted/90 border-fh-red/20;
+    min-width: 280px;
+  }
+
+  .fh-undo-toast .fh-undo-btn {
+    @apply px-2.5 py-1 text-2xs font-semibold rounded-md
+           bg-white/15 hover:bg-white/25 text-white
+           transition-colors duration-150 cursor-pointer
+           border border-white/10;
+  }
+
+  .fh-undo-toast .fh-countdown-bar {
+    @apply absolute bottom-0 left-0 h-0.5 rounded-full;
+    background: rgb(var(--fh-red) / 0.6);
+    animation: countdown linear forwards;
+  }
+
+  /* ── Theme toggle ── */
+
+  .fh-theme-btn {
+    @apply fh-btn-icon relative;
+  }
+
+  .fh-theme-btn .fh-theme-icon {
+    @apply transition-transform duration-200;
+  }
 }
 
 @layer utilities {
@@ -319,11 +436,11 @@
 
   .fh-text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #58a6ff, #bc8cff);
+    background-image: linear-gradient(135deg, rgb(var(--fh-accent)), rgb(var(--fh-purple)));
   }
 
   .fh-border-gradient {
-    border-image: linear-gradient(135deg, #58a6ff33, #bc8cff33) 1;
+    border-image: linear-gradient(135deg, rgb(var(--fh-accent) / 0.2), rgb(var(--fh-purple) / 0.2)) 1;
   }
 
   /* Smooth scrollbar fade */

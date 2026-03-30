@@ -6,8 +6,11 @@ import { showModal } from './components/modal.js';
 import { showToast } from './components/toast.js';
 import { showProgress, hideProgress } from './components/progress.js';
 import { registerCommands, openPalette, isPaletteOpen } from './components/command-palette.js';
+import { initTheme, cycleTheme, getTheme, THEMES } from './components/theme.js';
+import { scheduleSoftDelete, cancelSoftDelete, isPending } from './components/soft-delete.js';
 
 const state = createState();
+const pendingDeleteRepos = new Set();
 
 function send(type, payload = {}) {
   return new Promise((resolve) => {
@@ -19,6 +22,25 @@ function send(type, payload = {}) {
       resolve(res || { ok: false, error: 'No response' });
     });
   });
+}
+
+function getThemeIcon(theme) {
+  if (theme === THEMES.LIGHT) return 'sun';
+  if (theme === THEMES.DARK) return 'moon';
+  return 'monitor';
+}
+
+function getThemeLabel(theme) {
+  if (theme === THEMES.LIGHT) return 'Light';
+  if (theme === THEMES.DARK) return 'Dark';
+  return 'System';
+}
+
+function updateThemeButton() {
+  const el = document.getElementById('themeIcon');
+  if (el) el.innerHTML = icon(getThemeIcon(getTheme()), { size: 14 });
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.title = `Theme: ${getThemeLabel(getTheme())}`;
 }
 
 function injectIcons() {
@@ -40,6 +62,7 @@ function injectIcons() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = icon(name, opts);
   }
+  updateThemeButton();
 }
 
 function initCommandPalette() {
@@ -47,6 +70,7 @@ function initCommandPalette() {
     { id: 'search', label: 'Search repositories', icon: 'search', shortcut: '/', category: 'Navigation' },
     { id: 'refresh', label: 'Refresh repository list', icon: 'refresh', shortcut: 'F5', category: 'Navigation' },
     { id: 'settings', label: 'Toggle settings panel', icon: 'settings', category: 'Navigation' },
+    { id: 'theme', label: 'Toggle theme (Dark / Light / System)', icon: 'sun', category: 'Navigation' },
     { id: 'select-all', label: 'Select all visible repos', icon: 'selectAll', shortcut: 'Ctrl+A', category: 'Selection' },
     { id: 'deselect-all', label: 'Deselect all repos', icon: 'deselectAll', shortcut: 'Ctrl+Shift+A', category: 'Selection' },
     { id: 'bulk-public', label: 'Make selected repos public', icon: 'globe', category: 'Bulk Actions' },
@@ -73,6 +97,9 @@ function initCommandPalette() {
         break;
       case 'settings':
         toggleSettings();
+        break;
+      case 'theme':
+        handleThemeToggle();
         break;
       case 'select-all': {
         const filtered = state.getFiltered();
@@ -136,6 +163,12 @@ function initCommandPalette() {
         break;
     }
   });
+}
+
+function handleThemeToggle() {
+  const newTheme = cycleTheme();
+  updateThemeButton();
+  showToast(`Theme: ${getThemeLabel(newTheme)}`, 'info');
 }
 
 function exportRepos(format) {
@@ -230,7 +263,12 @@ function renderRepos() {
   emptyEl.classList.add('hidden');
   listEl.classList.remove('hidden');
   listEl.innerHTML = filtered
-    .map((r) => renderRepoCard(r, s.selected.has(r.full_name), s.busyRepos.has(r.full_name)))
+    .map((r) => renderRepoCard(
+      r,
+      s.selected.has(r.full_name),
+      s.busyRepos.has(r.full_name),
+      pendingDeleteRepos.has(r.full_name)
+    ))
     .join('');
 
   const showing = filtered.length === s.allRepos.length
@@ -259,12 +297,28 @@ async function loadRepos() {
   const res = await send('FETCH_REPOS');
   if (res.ok) {
     state.set({ allRepos: res.data, loading: false, selected: new Set(), busyRepos: new Set() });
+    fetchCiStatuses(res.data);
   } else {
     state.set({ loading: false });
     showToast(res.error || 'Failed to load repos', 'error');
   }
   renderRepos();
   updateBulkBar();
+}
+
+async function fetchCiStatuses(repos) {
+  const batch = repos.slice(0, 20);
+  for (const repo of batch) {
+    try {
+      const res = await send('GET_CI_STATUS', { fullName: repo.full_name });
+      if (res.ok && res.data) {
+        state.updateRepo(repo.full_name, { _ciStatus: res.data });
+      }
+    } catch (_) {
+      // CI status is best-effort
+    }
+  }
+  renderRepos();
 }
 
 async function handleSaveToken() {
@@ -389,29 +443,72 @@ async function handleArchive(fullName, unarchive) {
   });
 }
 
+function showUndoToast(fullName) {
+  const repoName = fullName.split('/')[1];
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const el = document.createElement('div');
+  el.className = 'fh-undo-toast relative overflow-hidden animate-toast-enter';
+  el.setAttribute('role', 'alert');
+  el.innerHTML = `
+    <span class="text-white shrink-0 p-1 rounded-lg bg-white/10">${icon('trash', { size: 12 })}</span>
+    <span class="flex-1 font-medium text-white">${escapeHtml(repoName)} will be deleted</span>
+    <button class="fh-undo-btn" data-undo="${escapeHtml(fullName)}">Undo</button>
+    <div class="fh-countdown-bar" style="animation-duration: 30s"></div>
+  `;
+
+  el.querySelector('.fh-undo-btn').addEventListener('click', () => {
+    cancelSoftDelete(fullName);
+    pendingDeleteRepos.delete(fullName);
+    renderRepos();
+    updateBulkBar();
+    el.remove();
+    showToast(`${repoName} restored`, 'success');
+  });
+
+  container.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 30500);
+}
+
 async function handleDelete(fullName) {
   const repoName = fullName.split('/')[1];
   showModal({
     title: `Delete ${escapeHtml(repoName)}?`,
     body: `<p class="text-fh-red font-medium">This action is permanent and cannot be undone.</p>
-           <p class="mt-1.5 text-fh-text-muted">All code, issues, PRs, and settings will be permanently deleted.</p>`,
+           <p class="mt-1.5 text-fh-text-muted">You'll have 30 seconds to undo after confirming.</p>`,
     confirmText: 'Delete this repository',
     confirmClass: 'fh-btn-danger',
     typed: repoName,
     dangerous: true,
     onConfirm: async () => {
-      state.markBusy(fullName);
+      pendingDeleteRepos.add(fullName);
       renderRepos();
-      const res = await send('DELETE_REPO', { fullName });
-      if (res.ok) {
-        state.removeRepo(fullName);
-        showToast(`${repoName} deleted`, 'success');
-      } else {
-        state.unmarkBusy(fullName);
-        showToast(res.error || 'Delete failed', 'error');
+      showUndoToast(fullName);
+
+      try {
+        await scheduleSoftDelete(
+          fullName,
+          async () => {
+            const res = await send('DELETE_REPO', { fullName });
+            pendingDeleteRepos.delete(fullName);
+            if (res.ok) {
+              state.removeRepo(fullName);
+              showToast(`${repoName} deleted`, 'success');
+            } else {
+              showToast(res.error || 'Delete failed', 'error');
+            }
+            renderRepos();
+            updateBulkBar();
+          },
+          () => {
+            pendingDeleteRepos.delete(fullName);
+          }
+        );
+      } catch (_) {
+        pendingDeleteRepos.delete(fullName);
+        renderRepos();
       }
-      renderRepos();
-      updateBulkBar();
     },
   });
 }
@@ -523,6 +620,9 @@ function bindEvents() {
   document.getElementById('clearTokenBtn').addEventListener('click', handleClearToken);
   document.getElementById('tokenToggleBtn').addEventListener('click', toggleTokenVisibility);
   document.getElementById('refreshBtn').addEventListener('click', loadRepos);
+
+  const themeBtn = document.getElementById('themeBtn');
+  if (themeBtn) themeBtn.addEventListener('click', handleThemeToggle);
 
   const cmdPaletteBtn = document.getElementById('cmdPaletteBtn');
   if (cmdPaletteBtn) cmdPaletteBtn.addEventListener('click', openPalette);
@@ -649,6 +749,10 @@ function bindEvents() {
 }
 
 async function init() {
+  initTheme((resolved) => {
+    updateThemeButton();
+  });
+
   injectIcons();
   initCommandPalette();
   bindEvents();

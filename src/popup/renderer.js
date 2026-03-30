@@ -1,12 +1,13 @@
 import { icon } from '../lib/icons.js';
 import { escapeHtml, relativeTime, formatNumber } from '../lib/utils.js';
 
-export function renderRepoCard(repo, isSelected, isBusy) {
+export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
   const badgeClass = repo.private ? 'fh-badge-private' : 'fh-badge-public';
   const badgeLabel = repo.private ? 'Private' : 'Public';
   const badgeIcon = repo.private ? icon('lock', { size: 10 }) : icon('globe', { size: 10 });
 
-  const cardClass = isSelected ? 'fh-card-interactive fh-card-selected' : 'fh-card-interactive';
+  let cardClass = isSelected ? 'fh-card-interactive fh-card-selected' : 'fh-card-interactive';
+  if (isPendingDelete) cardClass += ' fh-card-pending-delete';
 
   const archivedBadge = repo.archived
     ? `<span class="fh-badge-archived">${icon('archive', { size: 10 })} Archived</span>`
@@ -36,6 +37,8 @@ export function renderRepoCard(repo, isSelected, isBusy) {
     ? `<span class="inline-flex items-center gap-0.5 text-2xs text-fh-text-muted">${icon('fork', { size: 11 })} ${formatNumber(repo.forks_count)}</span>`
     : '';
 
+  const ciBadge = renderCiBadge(repo._ciStatus);
+
   return `
     <div class="${cardClass} relative p-3 group" data-repo="${escapeHtml(repo.full_name)}" role="listitem">
       ${busyOverlay}
@@ -53,6 +56,7 @@ export function renderRepoCard(repo, isSelected, isBusy) {
             <span class="${badgeClass}">${badgeIcon} ${badgeLabel}</span>
             ${archivedBadge}
             ${forkBadge}
+            ${ciBadge}
           </div>
           ${repo.description
             ? `<p class="text-xs text-fh-text-secondary mt-1 fh-truncate-2 leading-relaxed">${escapeHtml(repo.description)}</p>`
@@ -87,6 +91,20 @@ export function renderRepoCard(repo, isSelected, isBusy) {
         </div>
       </div>
     </div>`;
+}
+
+function renderCiBadge(status) {
+  if (!status) return '';
+  if (status === 'success') {
+    return `<span class="fh-badge border-fh-green/20 bg-fh-green-subtle text-fh-green">${icon('circleCheck', { size: 10 })} CI</span>`;
+  }
+  if (status === 'failure') {
+    return `<span class="fh-badge border-fh-red/20 bg-fh-red-subtle text-fh-red">${icon('circleX', { size: 10 })} CI</span>`;
+  }
+  if (status === 'pending') {
+    return `<span class="fh-badge border-fh-yellow/20 bg-fh-yellow-subtle text-fh-yellow">${icon('loader', { size: 10 })} CI</span>`;
+  }
+  return '';
 }
 
 const LANG_COLORS = {

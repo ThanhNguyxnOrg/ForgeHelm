@@ -188,9 +188,12 @@ ForgeHelm/
 │   │   ├── state.js               # State management
 │   │   ├── renderer.js            # DOM rendering engine
 │   │   └── components/            # UI components
-│   │       ├── modal.js
-│   │       ├── toast.js
-│   │       └── progress.js
+│   │       ├── command-palette.js  # Ctrl+K command palette
+│   │       ├── modal.js           # Confirmation dialogs
+│   │       ├── toast.js           # Toast notifications
+│   │       ├── progress.js        # Bulk operation progress
+│   │       ├── theme.js           # Dark/Light/System toggle
+│   │       └── soft-delete.js     # 30s undo grace period
 │   ├── content-script/            # GitHub page integration
 │   │   ├── launcher.js            # Floating action button
 │   │   └── launcher.css           # Launcher styles
@@ -268,6 +271,12 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 - [x] Single & bulk visibility change
 - [x] Single & bulk delete with typed confirmation
 - [x] Floating launcher for GitHub pages
+- [x] Command palette (`Ctrl+K`) with fuzzy search
+- [x] Dark / Light / System theme toggle
+- [x] Soft delete with 30s undo grace period
+- [x] CI status badges (GitHub Actions)
+- [x] Virtual scrolling via CSS `content-visibility`
+- [x] Glass-morphism UI with accessibility (ARIA, focus trap, keyboard nav)
 - [ ] Archive / Unarchive operations
 - [ ] Topic management (add/remove/replace)
 - [ ] Transfer ownership

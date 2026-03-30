@@ -171,6 +171,22 @@ class GitHubClient {
     return this.getJson(`/repos/${fullName}/languages`);
   }
 
+  async getCiStatus(fullName) {
+    try {
+      const data = await this.getJson(`/repos/${fullName}/actions/runs?per_page=1`);
+      if (data.workflow_runs && data.workflow_runs.length > 0) {
+        const run = data.workflow_runs[0];
+        if (run.conclusion === 'success') return 'success';
+        if (run.conclusion === 'failure') return 'failure';
+        if (run.status === 'in_progress' || run.status === 'queued') return 'pending';
+        return run.conclusion || run.status;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async fetchRateLimit() {
     return this.getJson('/rate_limit');
   }

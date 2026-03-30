@@ -16,8 +16,8 @@ export function showModal({ title, body, confirmText, confirmClass, onConfirm, t
   overlay.innerHTML = '';
 
   const dangerStripe = dangerous
-    ? '<div class="h-1 rounded-t-xl" style="background: linear-gradient(90deg, #da3633, #db6d28)"></div>'
-    : '<div class="h-1 rounded-t-xl" style="background: linear-gradient(90deg, #388bfd, #bc8cff)"></div>';
+    ? '<div class="fh-stripe-danger"></div>'
+    : '<div class="fh-stripe-accent"></div>';
 
   const typedSection = typed
     ? `<div class="mt-3">
