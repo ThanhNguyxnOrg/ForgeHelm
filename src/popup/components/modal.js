@@ -71,8 +71,12 @@ export function showModal({ title, body, confirmText, confirmClass, onConfirm, t
   }
 
   confirmBtn.addEventListener('click', () => {
+    const formData = {};
+    modalEl.querySelectorAll('[data-field]').forEach((el) => {
+      formData[el.dataset.field] = el.value;
+    });
     closeModal();
-    if (onConfirm) onConfirm();
+    if (onConfirm) onConfirm(formData);
   });
 
   modalEl.addEventListener('keydown', trapFocus);

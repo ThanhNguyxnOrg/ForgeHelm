@@ -74,6 +74,10 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
                   aria-label="${repo.private ? 'Make public' : 'Make private'}">
             ${repo.private ? icon('unlock', { size: 14 }) : icon('lock', { size: 14 })}
           </button>
+          <button class="fh-btn-icon topics-btn" data-name="${escapeHtml(repo.full_name)}"
+                  title="Manage topics" ${isBusy ? 'disabled' : ''} aria-label="Manage topics">
+            ${icon('tag', { size: 14 })}
+          </button>
           ${!repo.archived ? `
           <button class="fh-btn-icon archive-btn" data-name="${escapeHtml(repo.full_name)}"
                   title="Archive" ${isBusy ? 'disabled' : ''} aria-label="Archive repository">
@@ -83,6 +87,14 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
                   data-unarchive="true" title="Unarchive" ${isBusy ? 'disabled' : ''} aria-label="Unarchive repository">
             ${icon('archive', { size: 14 })}
           </button>`}
+          <button class="fh-btn-icon transfer-btn" data-name="${escapeHtml(repo.full_name)}"
+                  title="Transfer" ${isBusy ? 'disabled' : ''} aria-label="Transfer repository">
+            ${icon('send', { size: 14 })}
+          </button>
+          <button class="fh-btn-icon fork-btn" data-name="${escapeHtml(repo.full_name)}"
+                  title="Fork" ${isBusy ? 'disabled' : ''} aria-label="Fork repository">
+            ${icon('fork', { size: 14 })}
+          </button>
           <button class="fh-btn-icon delete-btn text-fh-red/60 hover:text-fh-red hover:bg-fh-red-subtle"
                   data-name="${escapeHtml(repo.full_name)}" title="Delete" ${isBusy ? 'disabled' : ''}
                   aria-label="Delete repository">

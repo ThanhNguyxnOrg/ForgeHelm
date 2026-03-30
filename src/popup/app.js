@@ -54,6 +54,9 @@ function injectIcons() {
     bulkPublicIcon: ['unlock', { size: 12 }],
     bulkPrivateIcon: ['lock', { size: 12 }],
     bulkArchiveIcon: ['archive', { size: 12 }],
+    bulkTopicsIcon: ['tag', { size: 12 }],
+    bulkTransferIcon: ['send', { size: 12 }],
+    bulkForkIcon: ['fork', { size: 12 }],
     bulkDeleteIcon: ['trash', { size: 12 }],
     rateLimitIcon: ['shield', {}],
     cmdPaletteIcon: ['command', { size: 14 }],
@@ -443,6 +446,112 @@ async function handleArchive(fullName, unarchive) {
   });
 }
 
+async function handleTopics(fullName) {
+  const repoName = fullName.split('/')[1];
+  state.markBusy(fullName);
+  renderRepos();
+
+  const topicsRes = await send('GET_TOPICS', { fullName });
+  state.unmarkBusy(fullName);
+  renderRepos();
+
+  const currentTopics = (topicsRes.ok && Array.isArray(topicsRes.data)) ? topicsRes.data : [];
+
+  showModal({
+    title: `Topics for ${escapeHtml(repoName)}`,
+    body: `<p class="text-fh-text-secondary mb-2">Current: ${currentTopics.length > 0 ? currentTopics.map(t => `<span class="fh-badge border-fh-accent/20 bg-fh-accent-subtle text-fh-accent mr-1">${escapeHtml(t)}</span>`).join('') : '<span class="text-fh-text-muted">none</span>'}</p>
+           <div class="mt-3">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">New topics <span class="text-fh-text-muted">(comma-separated)</span></label>
+             <input data-field="topics" type="text" class="fh-input text-xs" autocomplete="off" spellcheck="false" placeholder="react, typescript, awesome" value="${escapeHtml(currentTopics.join(', '))}" aria-label="Repository topics">
+           </div>`,
+    confirmText: 'Update Topics',
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const raw = formData.topics || '';
+      const topics = raw.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '-')).filter(Boolean);
+      state.markBusy(fullName);
+      renderRepos();
+      const res = await send('UPDATE_TOPICS', { fullName, topics });
+      state.unmarkBusy(fullName);
+      if (res.ok) {
+        showToast(`${repoName} topics updated`, 'success');
+      } else {
+        showToast(res.error || 'Failed to update topics', 'error');
+      }
+      renderRepos();
+    },
+  });
+}
+
+async function handleTransfer(fullName) {
+  const repoName = fullName.split('/')[1];
+  showModal({
+    title: `Transfer ${escapeHtml(repoName)}`,
+    body: `<p class="text-fh-red font-medium">This will transfer the repo to another owner.</p>
+           <div class="mt-3 space-y-2">
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1.5">New owner <span class="text-fh-red">*</span></label>
+               <input data-field="newOwner" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="username or org" aria-label="New owner">
+             </div>
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1.5">New name <span class="text-fh-text-muted">(optional)</span></label>
+               <input data-field="newName" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(repoName)}" aria-label="New repository name">
+             </div>
+           </div>`,
+    confirmText: 'Transfer',
+    confirmClass: 'fh-btn-danger',
+    typed: repoName,
+    dangerous: true,
+    onConfirm: async (formData) => {
+      const newOwner = (formData.newOwner || '').trim();
+      if (!newOwner) {
+        showToast('New owner is required', 'error');
+        return;
+      }
+      const newName = (formData.newName || '').trim() || undefined;
+      state.markBusy(fullName);
+      renderRepos();
+      const res = await send('TRANSFER_REPO', { fullName, newOwner, newName });
+      state.unmarkBusy(fullName);
+      if (res.ok) {
+        state.removeRepo(fullName);
+        showToast(`${repoName} transferred to ${newOwner}`, 'success');
+      } else {
+        showToast(res.error || 'Transfer failed', 'error');
+      }
+      renderRepos();
+      updateBulkBar();
+    },
+  });
+}
+
+async function handleFork(fullName) {
+  const repoName = fullName.split('/')[1];
+  showModal({
+    title: `Fork ${escapeHtml(repoName)}`,
+    body: `<p class="text-fh-text-secondary">Fork this repository to your account or an organization.</p>
+           <div class="mt-3">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">Organization <span class="text-fh-text-muted">(leave empty for personal account)</span></label>
+             <input data-field="org" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="optional org name" aria-label="Organization name">
+           </div>`,
+    confirmText: 'Fork',
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const org = (formData.org || '').trim() || undefined;
+      state.markBusy(fullName);
+      renderRepos();
+      const res = await send('FORK_REPO', { fullName, org });
+      state.unmarkBusy(fullName);
+      if (res.ok) {
+        showToast(`${repoName} forked successfully`, 'success');
+      } else {
+        showToast(res.error || 'Fork failed', 'error');
+      }
+      renderRepos();
+    },
+  });
+}
+
 function showUndoToast(fullName) {
   const repoName = fullName.split('/')[1];
   const container = document.getElementById('toastContainer');
@@ -614,6 +723,158 @@ function handleBulkDelete() {
   });
 }
 
+function handleBulkTopics() {
+  const count = state.get().selected.size;
+  showModal({
+    title: `Set topics on ${count} repos`,
+    body: `<p class="text-fh-text-secondary mb-2">These topics will <strong>replace</strong> existing topics on all selected repos.</p>
+           <div class="mt-3">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">Topics <span class="text-fh-text-muted">(comma-separated)</span></label>
+             <input data-field="topics" type="text" class="fh-input text-xs" autocomplete="off" spellcheck="false" placeholder="react, typescript, awesome" aria-label="Repository topics">
+           </div>`,
+    confirmText: `Update ${count} repos`,
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const raw = formData.topics || '';
+      const topics = raw.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '-')).filter(Boolean);
+      const targets = [...state.get().selected];
+      let done = 0;
+      let failed = 0;
+
+      for (const fullName of targets) {
+        state.markBusy(fullName);
+        renderRepos();
+        showProgress('Set Topics', done, targets.length);
+
+        try {
+          const res = await send('UPDATE_TOPICS', { fullName, topics });
+          if (!res.ok) throw new Error(res.error);
+          done++;
+        } catch (_) {
+          failed++;
+        }
+
+        state.unmarkBusy(fullName);
+        showProgress('Set Topics', done + failed, targets.length);
+      }
+
+      hideProgress();
+      state.deselectAll();
+      renderRepos();
+      updateBulkBar();
+
+      if (failed === 0) {
+        showToast(`Topics updated on ${done} repos`, 'success');
+      } else {
+        showToast(`Topics: ${done} done, ${failed} failed`, 'warning');
+      }
+    },
+  });
+}
+
+function handleBulkTransfer() {
+  const count = state.get().selected.size;
+  showModal({
+    title: `Transfer ${count} repos`,
+    body: `<p class="text-fh-red font-medium">This will transfer all selected repos to another owner.</p>
+           <div class="mt-3">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">New owner <span class="text-fh-red">*</span></label>
+             <input data-field="newOwner" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="username or org" aria-label="New owner">
+           </div>`,
+    confirmText: `Transfer ${count} repos`,
+    confirmClass: 'fh-btn-danger',
+    typed: `TRANSFER ${count}`,
+    dangerous: true,
+    onConfirm: async (formData) => {
+      const newOwner = (formData.newOwner || '').trim();
+      if (!newOwner) {
+        showToast('New owner is required', 'error');
+        return;
+      }
+      const targets = [...state.get().selected];
+      let done = 0;
+      let failed = 0;
+
+      for (const fullName of targets) {
+        state.markBusy(fullName);
+        renderRepos();
+        showProgress('Transfer', done, targets.length);
+
+        try {
+          const res = await send('TRANSFER_REPO', { fullName, newOwner });
+          if (!res.ok) throw new Error(res.error);
+          state.removeRepo(fullName);
+          done++;
+        } catch (_) {
+          failed++;
+        }
+
+        state.unmarkBusy(fullName);
+        showProgress('Transfer', done + failed, targets.length);
+      }
+
+      hideProgress();
+      state.deselectAll();
+      renderRepos();
+      updateBulkBar();
+
+      if (failed === 0) {
+        showToast(`${done} repos transferred to ${newOwner}`, 'success');
+      } else {
+        showToast(`Transfer: ${done} done, ${failed} failed`, 'warning');
+      }
+    },
+  });
+}
+
+function handleBulkFork() {
+  const count = state.get().selected.size;
+  showModal({
+    title: `Fork ${count} repos`,
+    body: `<p class="text-fh-text-secondary">Fork all selected repos to your account or an organization.</p>
+           <div class="mt-3">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">Organization <span class="text-fh-text-muted">(leave empty for personal account)</span></label>
+             <input data-field="org" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="optional org name" aria-label="Organization name">
+           </div>`,
+    confirmText: `Fork ${count} repos`,
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const org = (formData.org || '').trim() || undefined;
+      const targets = [...state.get().selected];
+      let done = 0;
+      let failed = 0;
+
+      for (const fullName of targets) {
+        state.markBusy(fullName);
+        renderRepos();
+        showProgress('Fork', done, targets.length);
+
+        try {
+          const res = await send('FORK_REPO', { fullName, org });
+          if (!res.ok) throw new Error(res.error);
+          done++;
+        } catch (_) {
+          failed++;
+        }
+
+        state.unmarkBusy(fullName);
+        showProgress('Fork', done + failed, targets.length);
+      }
+
+      hideProgress();
+      state.deselectAll();
+      renderRepos();
+      updateBulkBar();
+
+      if (failed === 0) {
+        showToast(`${done} repos forked`, 'success');
+      } else {
+        showToast(`Fork: ${done} done, ${failed} failed`, 'warning');
+      }
+    },
+  });
+}
+
 function bindEvents() {
   document.getElementById('settingsBtn').addEventListener('click', () => toggleSettings());
   document.getElementById('saveTokenBtn').addEventListener('click', handleSaveToken);
@@ -677,6 +938,24 @@ function bindEvents() {
       return;
     }
 
+    const topicsBtn = e.target.closest('.topics-btn');
+    if (topicsBtn) {
+      handleTopics(topicsBtn.dataset.name);
+      return;
+    }
+
+    const transferBtn = e.target.closest('.transfer-btn');
+    if (transferBtn) {
+      handleTransfer(transferBtn.dataset.name);
+      return;
+    }
+
+    const forkBtn = e.target.closest('.fork-btn');
+    if (forkBtn) {
+      handleFork(forkBtn.dataset.name);
+      return;
+    }
+
     const delBtn = e.target.closest('.delete-btn');
     if (delBtn) {
       handleDelete(delBtn.dataset.name);
@@ -707,6 +986,9 @@ function bindEvents() {
   document.getElementById('bulkPublicBtn').addEventListener('click', handleBulkPublic);
   document.getElementById('bulkPrivateBtn').addEventListener('click', handleBulkPrivate);
   document.getElementById('bulkArchiveBtn').addEventListener('click', handleBulkArchive);
+  document.getElementById('bulkTopicsBtn').addEventListener('click', handleBulkTopics);
+  document.getElementById('bulkTransferBtn').addEventListener('click', handleBulkTransfer);
+  document.getElementById('bulkForkBtn').addEventListener('click', handleBulkFork);
   document.getElementById('bulkDeleteBtn').addEventListener('click', handleBulkDelete);
 
   document.addEventListener('keydown', (e) => {
@@ -767,6 +1049,7 @@ async function init() {
       state.set({ user: validateRes.data });
       showUserBadge(validateRes.data);
       loadRepos();
+      refreshRateLimit();
     } else {
       toggleSettings(true);
       showToast('Token expired or invalid. Please update.', 'warning');
@@ -774,6 +1057,27 @@ async function init() {
   } else {
     toggleSettings(true);
     renderRepos();
+  }
+}
+
+async function refreshRateLimit() {
+  const res = await send('GET_RATE_LIMIT');
+  if (!res.ok) return;
+
+  const rl = res.data;
+  const rateLimitBtn = document.getElementById('rateLimitBtn');
+  const rateLimitInfo = document.getElementById('rateLimitInfo');
+
+  if (rateLimitBtn) {
+    rateLimitBtn.classList.remove('hidden');
+    rateLimitBtn.title = `API: ${rl.remaining} / ${rl.limit} remaining`;
+  }
+
+  if (rateLimitInfo) {
+    rateLimitInfo.classList.remove('hidden');
+    const pct = rl.limit > 0 ? Math.round((rl.remaining / rl.limit) * 100) : 0;
+    const color = pct > 50 ? 'text-fh-green' : pct > 20 ? 'text-fh-yellow' : 'text-fh-red';
+    rateLimitInfo.innerHTML = `<span class="${color}">${rl.remaining}</span><span class="text-fh-text-muted">/${rl.limit}</span>`;
   }
 }
 

@@ -277,12 +277,12 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 - [x] CI status badges (GitHub Actions)
 - [x] Virtual scrolling via CSS `content-visibility`
 - [x] Glass-morphism UI with accessibility (ARIA, focus trap, keyboard nav)
-- [ ] Archive / Unarchive operations
-- [ ] Topic management (add/remove/replace)
-- [ ] Transfer ownership
-- [ ] Fork to account/org
-- [ ] Export repo list (JSON/CSV)
-- [ ] Rate limit dashboard
+- [x] Archive / Unarchive operations
+- [x] Topic management (add/remove/replace)
+- [x] Transfer ownership
+- [x] Fork to account/org
+- [x] Export repo list (JSON/CSV)
+- [x] Rate limit dashboard
 - [ ] GitHub OAuth flow (alternative to PAT)
 - [ ] Organization repo support
 - [ ] Repo analytics & insights

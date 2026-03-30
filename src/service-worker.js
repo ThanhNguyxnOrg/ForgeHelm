@@ -60,6 +60,10 @@ router.register('FORK_REPO', async ({ fullName, org }) => {
   return github.forkRepo(fullName, org);
 });
 
+router.register('GET_TOPICS', async ({ fullName }) => {
+  return github.getTopics(fullName);
+});
+
 router.register('UPDATE_TOPICS', async ({ fullName, topics }) => {
   return github.setTopics(fullName, topics);
 });
