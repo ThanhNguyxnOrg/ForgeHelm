@@ -48,7 +48,7 @@ export class GitHubApiError extends ForgeHelmError {
     }
     const msg = this.message.toLowerCase();
     if (msg.includes('resource not accessible')) {
-      return 'Token lacks required permissions. For fine-grained PAT: enable "Administration: Read & Write". For classic PAT: enable "repo" + "delete_repo" scopes.';
+      return 'Token lacks required permissions. For classic PAT: enable "repo" + "delete_repo" scopes. For fine-grained PAT: enable "Administration: Read & Write".';
     }
     return 'Access denied. Check your token permissions.';
   }

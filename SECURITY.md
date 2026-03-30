@@ -24,7 +24,7 @@ ForgeHelm follows these security principles:
 - **Tokens are stored locally** in `chrome.storage.local` — never transmitted to third parties
 - **All API calls** go exclusively to `https://api.github.com`
 - **No analytics, no telemetry, no tracking** — zero external data collection
-- **Fine-grained PAT recommended** — minimal permissions by default
+- **Classic PAT supported and documented** — recommended operational scopes: `repo` + `delete_repo`
 - **Content Security Policy** enforced via Manifest V3
 - **Input escaping** on all user-generated content before DOM insertion
 - **Typed confirmation** required for all destructive operations

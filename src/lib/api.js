@@ -92,7 +92,7 @@ class GitHubClient {
       const user = await this.getJson('/user');
       const scopeCheck = await this.request('/user/repos?per_page=1&affiliation=owner');
       if (!scopeCheck.ok && scopeCheck.status === 403) {
-        throw new TokenError('Token lacks repository access. Enable "Administration" permission for fine-grained PAT, or "repo" scope for classic PAT.');
+        throw new TokenError('Token lacks repository access. Enable "repo" scope for classic PAT, or "Administration" permission for fine-grained PAT.');
       }
       return user;
     } catch (err) {

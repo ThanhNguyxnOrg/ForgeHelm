@@ -248,7 +248,7 @@ function renderRepos() {
     document.getElementById('emptyTitle').textContent = s.token ? 'No repositories found' : 'Welcome to ForgeHelm';
     document.getElementById('emptyDesc').textContent = s.token
       ? 'Your account has no owned repositories.'
-      : 'Enter your GitHub token in Settings to get started.';
+      : 'Enter your classic GitHub PAT (`ghp_`) in Settings to get started.';
     countEl.textContent = '0 repos';
     return;
   }
