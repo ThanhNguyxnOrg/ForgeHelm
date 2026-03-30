@@ -341,14 +341,12 @@
   }
 
   .fh-palette {
-    @apply absolute z-[70] left-1/2 -translate-x-1/2 top-12
+    @apply absolute z-[70] top-3 left-2 right-2
            max-h-[420px]
            bg-fh-surface/95 backdrop-blur-xl
            border border-fh-border/60 rounded-xl
            shadow-fh-xl overflow-hidden
            flex flex-col;
-    width: calc(100% - 1rem);
-    max-width: 464px;
     max-height: min(420px, calc(100% - 4rem));
   }
 
@@ -359,11 +357,11 @@
   @keyframes paletteIn {
     from {
       opacity: 0;
-      transform: translateX(-50%) scale(0.96);
+      transform: translateY(-6px) scale(0.98);
     }
     to {
       opacity: 1;
-      transform: translateX(-50%) scale(1);
+      transform: translateY(0) scale(1);
     }
   }
 
@@ -375,21 +373,26 @@
 
   .fh-palette-list {
     @apply flex-1 overflow-y-auto py-1.5;
+    min-height: 0;
   }
 
   .fh-palette-item {
-    @apply flex items-center gap-3 px-4 py-2.5 cursor-pointer
+    @apply flex items-start gap-3 px-4 py-2.5 cursor-pointer
            text-sm text-fh-text-secondary
            transition-colors duration-100
            min-w-0;
   }
 
   .fh-palette-label {
-    @apply flex-1 min-w-0 truncate;
+    @apply flex-1 min-w-0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
   }
 
   .fh-palette-shortcut {
     @apply ml-auto flex items-center gap-0.5 shrink-0;
+    margin-top: 1px;
   }
 
   .fh-palette-item[data-active="true"],

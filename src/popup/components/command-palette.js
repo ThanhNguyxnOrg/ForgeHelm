@@ -104,7 +104,7 @@ export function closePalette() {
   if (!paletteEl) return;
 
   paletteEl.style.opacity = '0';
-  paletteEl.style.transform = 'translateX(-50%) scale(0.97)';
+  paletteEl.style.transform = 'translateY(-4px) scale(0.98)';
   paletteEl.style.transition = 'all 0.15s ease-in';
 
   if (backdropEl) {
@@ -135,7 +135,9 @@ function handleGlobalEsc(e) {
 
 function executeCommand(cmd) {
   closePalette();
-  if (onExecute) onExecute(cmd.id);
+  if (onExecute) {
+    setTimeout(() => onExecute(cmd.id), 0);
+  }
 }
 
 function fuzzyMatch(query, target) {
