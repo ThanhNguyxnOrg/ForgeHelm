@@ -43,9 +43,7 @@ router.register('CLEAR_TOKEN', async () => {
 });
 
 router.register('FETCH_REPOS', async () => {
-  const token = await storage.getToken();
-  if (!token) return [];
-  github.setToken(token);
+  await ensureToken();
   return github.fetchAllRepos();
 });
 
@@ -117,9 +115,7 @@ router.register('GET_CI_STATUS', async ({ fullName }) => {
 });
 
 router.register('EXPORT_REPOS', async () => {
-  const token = await storage.getToken();
-  if (!token) return [];
-  github.setToken(token);
+  await ensureToken();
   return github.fetchAllRepos();
 });
 

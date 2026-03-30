@@ -1,4 +1,5 @@
 import { icon } from '../../lib/icons.js';
+import { escapeHtml } from '../../lib/utils.js';
 
 const TOAST_DURATION = 3500;
 
@@ -24,7 +25,7 @@ export function showToast(message, type = 'info') {
 
   el.innerHTML = `
     <span class="${style.iconColor} ${style.iconBg} shrink-0 p-1 rounded-lg">${icon(style.icon, { size: 12 })}</span>
-    <span class="flex-1 font-medium">${message}</span>
+    <span class="flex-1 font-medium">${escapeHtml(message)}</span>
     <button class="toast-close shrink-0 text-fh-text-muted hover:text-fh-text transition-colors p-0.5 rounded" aria-label="Dismiss">
       ${icon('x', { size: 12 })}
     </button>`;

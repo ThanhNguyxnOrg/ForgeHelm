@@ -3,13 +3,22 @@
   "version": "1.0.0",
   "description": "A powerful Chrome Extension for bulk GitHub repository management",
   "private": true,
+  "type": "module",
   "scripts": {
     "build:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --minify",
     "watch:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --watch",
     "dev": "npm run watch:css",
-    "build": "npm run build:css"
+    "build": "npm run build:css",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "jest": {
+    "transform": {},
+    "testEnvironment": "jsdom"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^3.4.17"
   },
   "author": "ThanhNguyxn07",

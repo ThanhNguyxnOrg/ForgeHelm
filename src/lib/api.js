@@ -1,5 +1,5 @@
 import { API_BASE, API_VERSION, PER_PAGE, RATE_LIMIT_BUFFER } from './constants.js';
-import { parseGitHubError, TokenError } from './errors.js';
+import { ForgeHelmError, parseGitHubError, TokenError } from './errors.js';
 import { parseLinkHeader, sleep } from './utils.js';
 import { logger } from './logger.js';
 
@@ -15,9 +15,8 @@ class GitHubClient {
 
   buildHeaders() {
     if (!this.token) throw new TokenError('No token configured. Please add your GitHub token in Settings.');
-    const prefix = this.token.startsWith('ghp_') ? 'token' : 'Bearer';
     return {
-      Authorization: `${prefix} ${this.token}`,
+      Authorization: `Bearer ${this.token}`,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': API_VERSION,
       'Content-Type': 'application/json',
@@ -51,10 +50,22 @@ class GitHubClient {
     const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
-      const res = await fetch(url, {
-        ...opts,
-        headers: { ...this.buildHeaders(), ...(opts.headers || {}) },
-      });
+      let res;
+      try {
+        res = await fetch(url, {
+          ...opts,
+          headers: { ...this.buildHeaders(), ...(opts.headers || {}) },
+        });
+      } catch (networkErr) {
+        // Retry on network failures (connection reset, DNS, timeout)
+        if (attempt < retries) {
+          const waitMs = Math.min(10000, 1000 * Math.pow(2, attempt));
+          logger.warn(`Network error, retry ${attempt + 1}/${retries} in ${waitMs}ms: ${networkErr.message}`);
+          await sleep(waitMs);
+          continue;
+        }
+        throw new ForgeHelmError(`Network error: ${networkErr.message}`, 'NETWORK');
+      }
 
       this.updateRateLimit(res);
 
@@ -90,9 +101,13 @@ class GitHubClient {
     this.token = testToken;
     try {
       const user = await this.getJson('/user');
-      const scopeCheck = await this.request('/user/repos?per_page=1&affiliation=owner');
-      if (!scopeCheck.ok && scopeCheck.status === 403) {
-        throw new TokenError('Token lacks repository access. Enable "repo" scope for classic PAT, or "Administration" permission for fine-grained PAT.');
+      try {
+        await this.request('/user/repos?per_page=1&affiliation=owner');
+      } catch (scopeErr) {
+        if (scopeErr.status === 403) {
+          throw new TokenError('Token lacks repository access. Enable "repo" scope for classic PAT, or "Administration" permission for fine-grained PAT.');
+        }
+        throw scopeErr;
       }
       return user;
     } catch (err) {
