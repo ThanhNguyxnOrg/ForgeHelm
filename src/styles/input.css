@@ -334,11 +334,13 @@
 
   .fh-palette {
     @apply fixed z-[70] left-1/2 -translate-x-1/2 top-[15%]
-           w-[440px] max-h-[420px]
+           max-h-[420px]
            bg-fh-surface/95 backdrop-blur-xl
            border border-fh-border/60 rounded-xl
            shadow-fh-xl overflow-hidden
            flex flex-col;
+    width: calc(100% - 2rem);
+    max-width: 440px;
   }
 
   .fh-palette-input {
@@ -354,7 +356,8 @@
   .fh-palette-item {
     @apply flex items-center gap-3 px-4 py-2.5 cursor-pointer
            text-sm text-fh-text-secondary
-           transition-colors duration-100;
+           transition-colors duration-100
+           min-w-0 overflow-hidden;
   }
 
   .fh-palette-item[data-active="true"],

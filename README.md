@@ -113,15 +113,59 @@ ForgeHelm uses a **Fine-Grained Personal Access Token** for maximum security:
    - **Token name**: `ForgeHelm`
    - **Expiration**: 90 days (recommended)
    - **Repository access**: All repositories
-   - **Permissions**:
-     - `Administration` → **Read and Write**
-     - `Metadata` → **Read-only** (auto-selected)
+   - **Permissions** — see the table below for what each feature requires
+
 4. Click **Generate token** and paste it into ForgeHelm
 
-<details>
-<summary>📸 <b>Token Setup Screenshots</b> (click to expand)</summary>
+#### 🔐 Required Permissions by Feature
 
-> Screenshots coming soon after v1.0 release
+> [!IMPORTANT]
+> Each feature requires specific token permissions. Enable only what you need, or grant all for full functionality.
+
+| Feature | Permission | Access Level | API Endpoint |
+|---------|-----------|:------------:|-------------|
+| 📋 List repos | `Metadata` | Read | `GET /user/repos` |
+| 🔍 Search & filter | `Metadata` | Read | (client-side) |
+| 📝 Edit description | `Administration` | Read & Write | `PATCH /repos/{owner}/{repo}` |
+| 🔓 Change visibility | `Administration` | Read & Write | `PATCH /repos/{owner}/{repo}` |
+| 📦 Archive / Unarchive | `Administration` | Read & Write | `PATCH /repos/{owner}/{repo}` |
+| 🗑️ Delete repository | `Administration` | Read & Write | `DELETE /repos/{owner}/{repo}` |
+| 📤 Transfer ownership | `Administration` | Read & Write | `POST /repos/{owner}/{repo}/transfer` |
+| 🍴 Fork repository | `Administration` | Read & Write | `POST /repos/{owner}/{repo}/forks` |
+| 🏷️ Manage topics | `Metadata` | Read & Write | `PUT /repos/{owner}/{repo}/topics` |
+| 🚦 CI status badges | `Actions` | Read | `GET /repos/{owner}/{repo}/actions/runs` |
+| 📊 Rate limit dashboard | *(no extra)* | — | `GET /rate_limit` |
+| 📋 Export (JSON/CSV) | `Metadata` | Read | (client-side) |
+| 🌙 Theme toggle | *(no extra)* | — | (client-side) |
+| ⌨️ Command palette | *(no extra)* | — | (client-side) |
+
+<details>
+<summary>📌 <b>Quick Setup — Full Access</b> (click to expand)</summary>
+
+For **all features** to work, enable these permissions:
+
+| Permission | Level | Covers |
+|-----------|:-----:|--------|
+| `Administration` | **Read & Write** | Visibility, delete, archive, transfer, fork, edit |
+| `Metadata` | **Read-only** | Listing, search, topics (auto-selected) |
+| `Actions` | **Read-only** | CI/CD status badges |
+
+> 💡 `Metadata` is auto-selected when you pick any other permission.
+
+</details>
+
+<details>
+<summary>📌 <b>Minimal Setup — Read Only</b> (click to expand)</summary>
+
+If you only need to **browse and export** your repos:
+
+| Permission | Level |
+|-----------|:-----:|
+| `Metadata` | **Read-only** |
+
+This gives you: listing, search, filter, sort, export, theme, command palette.
+
+> ⚠️ All write operations (delete, archive, visibility, transfer, fork, topics) will fail with a permission error.
 
 </details>
 
