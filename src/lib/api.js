@@ -211,16 +211,32 @@ class GitHubClient {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    return res.json();
+    try {
+      return await res.json();
+    } catch (err) {
+      // For 202 responses that might not have JSON body, return empty object
+      if (res.status === 202) {
+        return {};
+      }
+      throw err;
+    }
   }
 
   async forkRepo(fullName, org) {
-    const body = org ? { organization: org } : {};
-    const res = await this.request(`/repos/${fullName}/forks`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    return res.json();
+    const opts = { method: 'POST' };
+    if (org) {
+      opts.body = JSON.stringify({ organization: org });
+    }
+    const res = await this.request(`/repos/${fullName}/forks`, opts);
+    try {
+      return await res.json();
+    } catch (err) {
+      // For 202 responses that might not have JSON body, return empty object
+      if (res.status === 202) {
+        return {};
+      }
+      throw err;
+    }
   }
 
   async getTopics(fullName) {

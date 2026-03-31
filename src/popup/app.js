@@ -55,6 +55,7 @@ function injectIcons() {
     bulkPrivateIcon: ['lock', { size: 12 }],
     bulkArchiveIcon: ['archive', { size: 12 }],
     bulkTopicsIcon: ['tag', { size: 12 }],
+    bulkDescriptionIcon: ['edit', { size: 12 }],
     bulkTransferIcon: ['send', { size: 12 }],
     bulkForkIcon: ['fork', { size: 12 }],
     bulkDeleteIcon: ['trash', { size: 12 }],
@@ -79,6 +80,7 @@ function initCommandPalette() {
     { id: 'bulk-public', label: 'Make selected repos public', icon: 'globe', category: 'Bulk Actions' },
     { id: 'bulk-private', label: 'Make selected repos private', icon: 'lock', category: 'Bulk Actions' },
     { id: 'bulk-archive', label: 'Archive selected repos', icon: 'archive', category: 'Bulk Actions' },
+    { id: 'bulk-description', label: 'Edit descriptions of selected repos', icon: 'edit', category: 'Bulk Actions' },
     { id: 'bulk-delete', label: 'Delete selected repos', icon: 'trash', category: 'Bulk Actions' },
     { id: 'export-json', label: 'Export repos as JSON', icon: 'fileJson', category: 'Export' },
     { id: 'export-csv', label: 'Export repos as CSV', icon: 'download', category: 'Export' },
@@ -124,6 +126,9 @@ function initCommandPalette() {
         break;
       case 'bulk-archive':
         handleBulkArchive();
+        break;
+      case 'bulk-description':
+        handleBulkDescription();
         break;
       case 'bulk-delete':
         handleBulkDelete();
@@ -311,17 +316,22 @@ async function loadRepos() {
 
 async function fetchCiStatuses(repos) {
   const batch = repos.slice(0, 20);
-  for (const repo of batch) {
-    try {
-      const res = await send('GET_CI_STATUS', { fullName: repo.full_name });
-      if (res.ok && res.data) {
-        state.updateRepo(repo.full_name, { _ciStatus: res.data });
+  const chunkSize = 5;
+
+  for (let i = 0; i < batch.length; i += chunkSize) {
+    const chunk = batch.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (repo) => {
+      try {
+        const res = await send('GET_CI_STATUS', { fullName: repo.full_name });
+        if (res.ok && res.data) {
+          state.updateRepo(repo.full_name, { _ciStatus: res.data });
+        }
+      } catch (_) {
+        // CI status is best-effort
       }
-    } catch (_) {
-      // CI status is best-effort
-    }
+    }));
+    renderRepos();
   }
-  renderRepos();
 }
 
 async function handleSaveToken() {
@@ -429,7 +439,14 @@ async function handleChangeVisibility(fullName, currentlyPrivate) {
       state.unmarkBusy(fullName);
       if (res.ok) {
         state.updateRepo(fullName, res.data);
-        showToast(`${fullName.split('/')[1]} is now ${newVis}`, 'success');
+        const updated = state.get().allRepos.find((r) => r.full_name === fullName);
+        const hiddenByVisibility = state.get().visibility === 'private' && updated && !updated.private;
+        showToast(
+          hiddenByVisibility
+            ? `${fullName.split('/')[1]} is now ${newVis} (hidden by current filter)`
+            : `${fullName.split('/')[1]} is now ${newVis}`,
+          'success'
+        );
       } else {
         showToast(res.error || 'Visibility change failed', 'error');
       }
@@ -455,7 +472,14 @@ async function handleArchive(fullName, unarchive) {
       state.unmarkBusy(fullName);
       if (res.ok) {
         state.updateRepo(fullName, res.data);
-        showToast(`${fullName.split('/')[1]} ${action}d`, 'success');
+        const updated = state.get().allRepos.find((r) => r.full_name === fullName);
+        const hiddenByArchived = state.get().type === 'archived' && updated && !updated.archived;
+        showToast(
+          hiddenByArchived
+            ? `${fullName.split('/')[1]} ${action}d (hidden by current filter)`
+            : `${fullName.split('/')[1]} ${action}d`,
+          'success'
+        );
       } else {
         showToast(res.error || `Failed to ${action}`, 'error');
       }
@@ -501,11 +525,90 @@ async function handleTopics(fullName) {
   });
 }
 
+async function handleDescription(fullName) {
+  const repo = state.get().allRepos.find((r) => r.full_name === fullName);
+  const repoName = fullName.split('/')[1];
+  const currentDescription = repo?.description || '';
+
+  showModal({
+    title: `Edit description for ${escapeHtml(repoName)}`,
+    body: `<div class="mt-1">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">Description</label>
+             <input data-field="description" type="text" class="fh-input text-xs" autocomplete="off" spellcheck="false" placeholder="Repository description" value="${escapeHtml(currentDescription)}" aria-label="Repository description">
+           </div>`,
+    confirmText: 'Update Description',
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const description = (formData.description || '').trim();
+      state.markBusy(fullName);
+      renderRepos();
+      const res = await send('UPDATE_REPO', { fullName, updates: { description } });
+      state.unmarkBusy(fullName);
+      if (res.ok) {
+        state.updateRepo(fullName, res.data);
+        showToast(`${repoName} description updated`, 'success');
+      } else {
+        showToast(res.error || 'Failed to update description', 'error');
+      }
+      renderRepos();
+    },
+  });
+}
+
+function handleBulkDescription() {
+  const count = state.get().selected.size;
+  showModal({
+    title: `Edit description on ${count} repos`,
+    body: `<p class="text-fh-text-secondary mb-2">This will set the same description for all selected repositories.</p>
+           <div class="mt-3">
+             <label class="text-2xs text-fh-text-muted block mb-1.5">Description</label>
+             <input data-field="description" type="text" class="fh-input text-xs" autocomplete="off" spellcheck="false" placeholder="Repository description" aria-label="Repository description">
+           </div>`,
+    confirmText: `Update ${count} repos`,
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const description = (formData.description || '').trim();
+      const targets = [...state.get().selected];
+      let done = 0;
+      let failed = 0;
+
+      for (const fullName of targets) {
+        state.markBusy(fullName);
+        renderRepos();
+        showProgress('Edit Description', done, targets.length);
+
+        try {
+          const res = await send('UPDATE_REPO', { fullName, updates: { description } });
+          if (!res.ok) throw new Error(res.error);
+          state.updateRepo(fullName, res.data);
+          done++;
+        } catch (_) {
+          failed++;
+        }
+
+        state.unmarkBusy(fullName);
+        showProgress('Edit Description', done + failed, targets.length);
+      }
+
+      hideProgress();
+      state.deselectAll();
+      renderRepos();
+      updateBulkBar();
+
+      if (failed === 0) {
+        showToast(`Description updated on ${done} repos`, 'success');
+      } else {
+        showToast(`Description: ${done} done, ${failed} failed`, 'warning');
+      }
+    },
+  });
+}
+
 async function handleTransfer(fullName) {
   const repoName = fullName.split('/')[1];
   showModal({
     title: `Transfer ${escapeHtml(repoName)}`,
-    body: `<p class="text-fh-red font-medium">This will transfer the repo to another owner.</p>
+    body: `<p class="text-fh-text-secondary font-medium">This sends a transfer request. The recipient must accept it.</p>
            <div class="mt-3 space-y-2">
              <div>
                <label class="text-2xs text-fh-text-muted block mb-1.5">New owner <span class="text-fh-red">*</span></label>
@@ -516,10 +619,10 @@ async function handleTransfer(fullName) {
                <input data-field="newName" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(repoName)}" aria-label="New repository name">
              </div>
            </div>`,
-    confirmText: 'Transfer',
-    confirmClass: 'fh-btn-danger',
+    confirmText: 'Send Request',
+    confirmClass: 'fh-btn-primary',
     typed: repoName,
-    dangerous: true,
+    dangerous: false,
     onConfirm: async (formData) => {
       const newOwner = (formData.newOwner || '').trim();
       if (!newOwner) {
@@ -532,10 +635,10 @@ async function handleTransfer(fullName) {
       const res = await send('TRANSFER_REPO', { fullName, newOwner, newName });
       state.unmarkBusy(fullName);
       if (res.ok) {
-        state.removeRepo(fullName);
-        showToast(`${repoName} transferred to ${newOwner}`, 'success');
+        showToast(`Transfer requested. ${newOwner} must accept it.`, 'success');
       } else {
-        showToast(res.error || 'Transfer failed', 'error');
+        // Show detailed error from GitHub API
+        showToast(`Transfer failed: ${res.error || 'Unknown error'}`, 'error');
       }
       renderRepos();
       updateBulkBar();
@@ -563,7 +666,7 @@ async function handleFork(fullName) {
       if (res.ok) {
         showToast(`${repoName} forked successfully`, 'success');
       } else {
-        showToast(res.error || 'Fork failed', 'error');
+        showToast(`Fork failed: ${res.error || 'Unknown error'}`, 'error');
       }
       renderRepos();
     },
@@ -606,7 +709,7 @@ async function handleDelete(fullName) {
            <p class="mt-1.5 text-fh-text-muted">You'll have 30 seconds to undo after confirming.</p>`,
     confirmText: 'Delete this repository',
     confirmClass: 'fh-btn-danger',
-    typed: repoName,
+    typed: 'DELETE',
     dangerous: true,
     onConfirm: async () => {
       pendingDeleteRepos.add(fullName);
@@ -642,7 +745,7 @@ async function handleDelete(fullName) {
 
 async function runBulkAction(actionName, actionFn, confirmOpts) {
   const s = state.get();
-  const targets = [...s.selected];
+  const targets = confirmOpts?.targets || [...s.selected];
   if (targets.length === 0) return;
 
   showModal({
@@ -682,43 +785,83 @@ async function runBulkAction(actionName, actionFn, confirmOpts) {
 }
 
 function handleBulkPublic() {
-  const count = state.get().selected.size;
+  const selected = [...state.get().selected];
+  const archivedTargets = selected.filter((fullName) => {
+    const repo = state.get().allRepos.find((r) => r.full_name === fullName);
+    return repo?.archived;
+  });
+
+  if (archivedTargets.length > 0) {
+    showToast(`Skip ${archivedTargets.length} archived repo(s). Unarchive first, then make public.`, 'warning');
+  }
+
+  const targets = selected.filter((fullName) => !archivedTargets.includes(fullName));
+  const count = targets.length;
+  if (count === 0) return;
+
   runBulkAction('Make Public', async (fn) => {
     const res = await send('CHANGE_VISIBILITY', { fullName: fn, isPrivate: false });
     if (!res.ok) throw new Error(res.error);
     state.updateRepo(fn, res.data);
   }, {
+    targets,
     title: `Make ${count} repos public?`,
-    body: 'All selected repos will become publicly visible.',
+    body: 'All selected non-archived repos will become publicly visible.',
     confirmText: `Make ${count} public`,
     confirmClass: 'fh-btn-primary',
   });
 }
 
 function handleBulkPrivate() {
-  const count = state.get().selected.size;
+  const selected = [...state.get().selected];
+  const archivedTargets = selected.filter((fullName) => {
+    const repo = state.get().allRepos.find((r) => r.full_name === fullName);
+    return repo?.archived;
+  });
+
+  if (archivedTargets.length > 0) {
+    showToast(`Skip ${archivedTargets.length} archived repo(s). Unarchive first, then make private.`, 'warning');
+  }
+
+  const targets = selected.filter((fullName) => !archivedTargets.includes(fullName));
+  const count = targets.length;
+  if (count === 0) return;
+
   runBulkAction('Make Private', async (fn) => {
     const res = await send('CHANGE_VISIBILITY', { fullName: fn, isPrivate: true });
     if (!res.ok) throw new Error(res.error);
     state.updateRepo(fn, res.data);
   }, {
+    targets,
     title: `Make ${count} repos private?`,
-    body: 'All selected repos will become private.',
+    body: 'All selected non-archived repos will become private.',
     confirmText: `Make ${count} private`,
     confirmClass: 'fh-btn-primary',
   });
 }
 
 function handleBulkArchive() {
-  const count = state.get().selected.size;
-  runBulkAction('Archive', async (fn) => {
-    const res = await send('ARCHIVE_REPO', { fullName: fn, archived: true });
+  const selected = [...state.get().selected];
+  const archivedTargets = selected.filter((fullName) => {
+    const repo = state.get().allRepos.find((r) => r.full_name === fullName);
+    return repo?.archived;
+  });
+
+  const actionLabel = archivedTargets.length > 0 ? 'Archive/Unarchive' : 'Archive';
+  const count = selected.length;
+
+  runBulkAction(actionLabel, async (fn) => {
+    const repo = state.get().allRepos.find((r) => r.full_name === fn);
+    const nextArchived = repo?.archived ? false : true;
+    const res = await send('ARCHIVE_REPO', { fullName: fn, archived: nextArchived });
     if (!res.ok) throw new Error(res.error);
     state.updateRepo(fn, res.data);
   }, {
-    title: `Archive ${count} repos?`,
-    body: 'Archived repos become read-only. You can unarchive later.',
-    confirmText: `Archive ${count} repos`,
+    title: `${archivedTargets.length > 0 ? 'Toggle archive state for' : 'Archive'} ${count} repos?`,
+    body: archivedTargets.length > 0
+      ? 'Archived repos will be unarchived; non-archived repos will be archived.'
+      : 'Archived repos become read-only. You can unarchive later.',
+    confirmText: `${archivedTargets.length > 0 ? 'Apply to' : 'Archive'} ${count} repos`,
     confirmClass: 'fh-btn-primary',
     dangerous: true,
   });
@@ -736,7 +879,7 @@ function handleBulkDelete() {
            <p class="mt-1.5 text-fh-text-muted">All code, issues, and settings for ${count} repos will be lost forever.</p>`,
     confirmText: `Delete ${count} repos`,
     confirmClass: 'fh-btn-danger',
-    typed: `DELETE ${count}`,
+    typed: 'DELETE',
     dangerous: true,
   });
 }
@@ -794,21 +937,28 @@ function handleBulkTransfer() {
   const count = state.get().selected.size;
   showModal({
     title: `Transfer ${count} repos`,
-    body: `<p class="text-fh-red font-medium">This will transfer all selected repos to another owner.</p>
-           <div class="mt-3">
-             <label class="text-2xs text-fh-text-muted block mb-1.5">New owner <span class="text-fh-red">*</span></label>
-             <input data-field="newOwner" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="username or org" aria-label="New owner">
+    body: `<p class="text-fh-text-secondary font-medium">This sends transfer requests. Recipients must accept them.</p>
+           <div class="mt-3 space-y-2">
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1.5">New owner <span class="text-fh-red">*</span></label>
+               <input data-field="newOwner" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="username or org" aria-label="New owner">
+             </div>
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1.5">New name <span class="text-fh-text-muted">(optional, applied to all)</span></label>
+               <input data-field="newName" type="text" class="fh-input text-xs font-mono" autocomplete="off" spellcheck="false" placeholder="leave empty to keep original names" aria-label="New repository name">
+             </div>
            </div>`,
     confirmText: `Transfer ${count} repos`,
-    confirmClass: 'fh-btn-danger',
-    typed: `TRANSFER ${count}`,
-    dangerous: true,
+    confirmClass: 'fh-btn-primary',
+    typed: 'TRANSFER',
+    dangerous: false,
     onConfirm: async (formData) => {
       const newOwner = (formData.newOwner || '').trim();
       if (!newOwner) {
         showToast('New owner is required', 'error');
         return;
       }
+      const newName = (formData.newName || '').trim() || undefined;
       const targets = [...state.get().selected];
       let done = 0;
       let failed = 0;
@@ -819,11 +969,11 @@ function handleBulkTransfer() {
         showProgress('Transfer', done, targets.length);
 
         try {
-          const res = await send('TRANSFER_REPO', { fullName, newOwner });
+          const res = await send('TRANSFER_REPO', { fullName, newOwner, newName });
           if (!res.ok) throw new Error(res.error);
-          state.removeRepo(fullName);
           done++;
-        } catch (_) {
+        } catch (err) {
+          console.error(`Transfer failed for ${fullName}:`, err);
           failed++;
         }
 
@@ -837,9 +987,9 @@ function handleBulkTransfer() {
       updateBulkBar();
 
       if (failed === 0) {
-        showToast(`${done} repos transferred to ${newOwner}`, 'success');
+        showToast(`Transfer requested for ${done} repos. ${newOwner} must accept.`, 'success');
       } else {
-        showToast(`Transfer: ${done} done, ${failed} failed`, 'warning');
+        showToast(`Transfer: ${done} requested, ${failed} failed`, 'warning');
       }
     },
   });
@@ -871,7 +1021,8 @@ function handleBulkFork() {
           const res = await send('FORK_REPO', { fullName, org });
           if (!res.ok) throw new Error(res.error);
           done++;
-        } catch (_) {
+        } catch (err) {
+          console.error(`Fork failed for ${fullName}:`, err);
           failed++;
         }
 
@@ -962,6 +1113,12 @@ function bindEvents() {
       return;
     }
 
+    const descriptionBtn = e.target.closest('.description-btn');
+    if (descriptionBtn) {
+      handleDescription(descriptionBtn.dataset.name);
+      return;
+    }
+
     const transferBtn = e.target.closest('.transfer-btn');
     if (transferBtn) {
       handleTransfer(transferBtn.dataset.name);
@@ -1007,6 +1164,7 @@ function bindEvents() {
   document.getElementById('bulkTopicsBtn').addEventListener('click', handleBulkTopics);
   document.getElementById('bulkTransferBtn').addEventListener('click', handleBulkTransfer);
   document.getElementById('bulkForkBtn').addEventListener('click', handleBulkFork);
+  document.getElementById('bulkDescriptionBtn').addEventListener('click', handleBulkDescription);
   document.getElementById('bulkDeleteBtn').addEventListener('click', handleBulkDelete);
 
   document.addEventListener('keydown', (e) => {

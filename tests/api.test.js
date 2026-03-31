@@ -54,4 +54,30 @@ describe('GitHubClient token validation logic', () => {
     // It should throw at the end, not return undefined
     await expect(github.request('/test', {}, 1)).rejects.toThrow(/API rate limit exceeded/);
   });
+
+  test('transferRepo should not fail when GitHub returns accepted response without JSON body', async () => {
+    globalThis.fetch.mockImplementation(() => Promise.resolve({
+      ok: true,
+      status: 202,
+      headers: new Headers(),
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    }));
+
+    github.setToken('test_token');
+
+    await expect(github.transferRepo('owner/repo', 'new-owner')).resolves.toEqual({});
+  });
+
+  test('forkRepo should not fail when GitHub returns accepted response without JSON body', async () => {
+    globalThis.fetch.mockImplementation(() => Promise.resolve({
+      ok: true,
+      status: 202,
+      headers: new Headers(),
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    }));
+
+    github.setToken('test_token');
+
+    await expect(github.forkRepo('owner/repo')).resolves.toEqual({});
+  });
 });

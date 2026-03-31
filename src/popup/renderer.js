@@ -68,7 +68,7 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
             <span class="text-2xs text-fh-text-muted ml-auto">${relativeTime(repo.updated_at)}</span>
           </div>
         </div>
-        <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <div class="flex flex-wrap items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           <button class="fh-btn-icon visibility-btn" data-name="${escapeHtml(repo.full_name)}"
                   data-private="${repo.private}" title="Toggle visibility" ${isBusy ? 'disabled' : ''}
                   aria-label="${repo.private ? 'Make public' : 'Make private'}">
@@ -77,6 +77,10 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
           <button class="fh-btn-icon topics-btn" data-name="${escapeHtml(repo.full_name)}"
                   title="Manage topics" ${isBusy ? 'disabled' : ''} aria-label="Manage topics">
             ${icon('tag', { size: 14 })}
+          </button>
+          <button class="fh-btn-icon description-btn" data-name="${escapeHtml(repo.full_name)}"
+                  title="Edit description" ${isBusy ? 'disabled' : ''} aria-label="Edit repository description">
+            ${icon('edit', { size: 14 })}
           </button>
           ${!repo.archived ? `
           <button class="fh-btn-icon archive-btn" data-name="${escapeHtml(repo.full_name)}"
