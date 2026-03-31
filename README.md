@@ -48,8 +48,8 @@ Managing dozens (or hundreds) of GitHub repositories is painful. Changing visibi
 | 🗑️ Delete Repository | ✅ | ✅ | Permanent deletion with typed confirmation |
 | 📦 Archive / Unarchive | ✅ | ✅ | Archive repos to mark as read-only |
 | 🏷️ Manage Topics | ✅ | ✅ | Add, remove, or replace repository topics |
-| 📤 Transfer Ownership | ✅ | ✅ | Transfer repos to another user or org *(temporarily disabled)* |
-| 🍴 Fork Repository | ✅ | ✅ | Fork to your account or organization *(temporarily disabled)* |
+| 📤 Transfer Ownership | ✅ | ✅ | Transfer repos to another user or org |
+| 🍴 Fork Repository | ✅ | ✅ | Fork to your account or organization |
 | 📝 Edit Description | ✅ | ✅ | Update repo descriptions in bulk |
 
 ### 🔍 Smart Filtering & Search
@@ -376,21 +376,6 @@ Your token lacks the required permissions for the operation you're trying to per
 2. Set `Administration` to **Read & Write** and include target repos
 
 > 💡 ForgeHelm will tell you exactly which permission is missing when this error occurs.
-
-</details>
-
-<details>
-<summary>🔴 <b>Transfer/Fork operations failing</b></summary>
-
-> [!WARNING]
-> **Transfer and Fork operations may be unreliable.** These features are implemented in the UI but can fail at runtime due to GitHub API response handling complexities. Use with caution.
-
-**Known issues:**
-- Transfer requests may occasionally fail with API errors
-- Fork operations might not complete as expected in all scenarios
-- GitHub's 202 (Accepted) async response pattern has edge cases that need refinement
-
-**Recommendation:** Test with a single repository first, or use the GitHub web interface for critical operations until reliability improvements are released.
 
 </details>
 
