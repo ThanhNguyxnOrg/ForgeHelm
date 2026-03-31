@@ -424,6 +424,11 @@ function toggleTokenVisibility() {
 }
 
 async function handleChangeVisibility(fullName, currentlyPrivate) {
+  const repo = state.get().allRepos.find((r) => r.full_name === fullName);
+  if (repo?.archived) {
+    showToast('Cannot change visibility of archived repo. Unarchive first.', 'warning');
+    return;
+  }
   const newVis = currentlyPrivate ? 'public' : 'private';
   showModal({
     title: `Make ${escapeHtml(fullName.split('/')[1])} ${newVis}?`,
