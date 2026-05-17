@@ -129,7 +129,7 @@ fix: prevent double-click on delete button
 
 ## 🐛 Reporting Bugs
 
-Use the [GitHub Issues](https://github.com/ThanhNguyxn07/ForgeHelm/issues) page with the **Bug Report** template.
+Use the [GitHub Issues](https://github.com/ThanhNguyxnOrg/ForgeHelm/issues) page with the **Bug Report** template.
 
 Include:
 - Steps to reproduce
@@ -142,7 +142,7 @@ Include:
 
 ## 💡 Suggesting Features
 
-Use the [GitHub Issues](https://github.com/ThanhNguyxn07/ForgeHelm/issues) page with the **Feature Request** template.
+Use the [GitHub Issues](https://github.com/ThanhNguyxnOrg/ForgeHelm/issues) page with the **Feature Request** template.
 
 Include:
 - Clear description of the feature

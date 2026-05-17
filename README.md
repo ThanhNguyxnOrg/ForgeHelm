@@ -1,19 +1,19 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/ThanhNguyxn07/ForgeHelm/main/assets/banner.png" alt="ForgeHelm Banner" width="100%" />
+<img src="https://raw.githubusercontent.com/ThanhNguyxnOrg/ForgeHelm/main/assets/banner.png" alt="ForgeHelm Banner" width="100%" />
 
 # ⚒️ ForgeHelm
 
 **The Ultimate Chrome Extension for Bulk GitHub Repository Management**
 
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/ThanhNguyxn07/ForgeHelm)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/ThanhNguyxnOrg/ForgeHelm)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-00C853?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![GitHub API](https://img.shields.io/badge/GitHub-API%20v3-181717?style=for-the-badge&logo=github&logoColor=white)](https://docs.github.com/en/rest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-[![Stars](https://img.shields.io/github/stars/ThanhNguyxn07/ForgeHelm?style=social)](https://github.com/ThanhNguyxn07/ForgeHelm/stargazers)
-[![Forks](https://img.shields.io/github/forks/ThanhNguyxn07/ForgeHelm?style=social)](https://github.com/ThanhNguyxn07/ForgeHelm/network/members)
-[![Issues](https://img.shields.io/github/issues/ThanhNguyxn07/ForgeHelm?color=f85149)](https://github.com/ThanhNguyxn07/ForgeHelm/issues)
+[![Stars](https://img.shields.io/github/stars/ThanhNguyxnOrg/ForgeHelm?style=social)](https://github.com/ThanhNguyxnOrg/ForgeHelm/stargazers)
+[![Forks](https://img.shields.io/github/forks/ThanhNguyxnOrg/ForgeHelm?style=social)](https://github.com/ThanhNguyxnOrg/ForgeHelm/network/members)
+[![Issues](https://img.shields.io/github/issues/ThanhNguyxnOrg/ForgeHelm?color=f85149)](https://github.com/ThanhNguyxnOrg/ForgeHelm/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 <p align="center">
@@ -88,7 +88,7 @@ Managing dozens (or hundreds) of GitHub repositories is painful. Changing visibi
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/ThanhNguyxn07/ForgeHelm.git
+git clone https://github.com/ThanhNguyxnOrg/ForgeHelm.git
 cd ForgeHelm
 
 # 2. Install dependencies
@@ -464,7 +464,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 <div align="center">
 
-**⚒️ Built with determination by [ThanhNguyxn07](https://github.com/ThanhNguyxn07)**
+**⚒️ Built with determination by [RealThanhNguyxn](https://github.com/RealThanhNguyxn)**
 
 <sub>If ForgeHelm helps you manage your repos, consider giving it a ⭐</sub>
 
