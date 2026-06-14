@@ -2,7 +2,11 @@
 
 <img src="https://raw.githubusercontent.com/ThanhNguyxnOrg/ForgeHelm/main/assets/banner.png" alt="ForgeHelm Banner" width="100%" />
 
-# ⚒️ ForgeHelm
+<p align="center">
+  <img src="src/icons/icon-128.png" alt="ForgeHelm Logo" width="80" height="80" />
+</p>
+
+# ForgeHelm
 
 **The Ultimate Chrome Extension for Bulk GitHub Repository Management**
 

@@ -30,11 +30,11 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
     : '';
 
   const starsBadge = repo.stargazers_count > 0
-    ? `<span class="inline-flex items-center gap-0.5 text-2xs text-fh-text-muted">${icon('star', { size: 11 })} ${formatNumber(repo.stargazers_count)}</span>`
+    ? `<span class="inline-flex items-center gap-0.5 text-2xs text-fh-text-muted tabular-nums">${icon('star', { size: 11 })} ${formatNumber(repo.stargazers_count)}</span>`
     : '';
 
   const forkCount = repo.forks_count > 0
-    ? `<span class="inline-flex items-center gap-0.5 text-2xs text-fh-text-muted">${icon('fork', { size: 11 })} ${formatNumber(repo.forks_count)}</span>`
+    ? `<span class="inline-flex items-center gap-0.5 text-2xs text-fh-text-muted tabular-nums">${icon('fork', { size: 11 })} ${formatNumber(repo.forks_count)}</span>`
     : '';
 
   const ciBadge = renderCiBadge(repo._ciStatus);
@@ -65,10 +65,10 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
             ${langDot}
             ${starsBadge}
             ${forkCount}
-            <span class="text-2xs text-fh-text-muted ml-auto">${relativeTime(repo.updated_at)}</span>
+            <span class="text-2xs text-fh-text-muted ml-auto tabular-nums">${relativeTime(repo.updated_at)}</span>
           </div>
         </div>
-        <div class="flex flex-wrap items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <div class="flex flex-wrap items-center gap-0.5 shrink-0 opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
           <button class="fh-btn-icon visibility-btn" data-name="${escapeHtml(repo.full_name)}"
                   data-private="${repo.private}" title="Toggle visibility" ${isBusy ? 'disabled' : ''}
                   aria-label="${repo.private ? 'Make public' : 'Make private'}">

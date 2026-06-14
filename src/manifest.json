@@ -36,12 +36,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["popup/popup.html", "content-script/launcher.css"],
+      "resources": ["popup/popup.html", "content-script/launcher.css", "icons/*"],
       "matches": ["https://github.com/*"],
       "use_dynamic_url": true
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';"
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-ancestors 'self' https://github.com;"
   }
 }

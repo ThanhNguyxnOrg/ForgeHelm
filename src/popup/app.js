@@ -45,7 +45,6 @@ function updateThemeButton() {
 
 function injectIcons() {
   const map = {
-    headerIcon: ['hammer', { size: 20 }],
     settingsIcon: ['settings', {}],
     searchIcon: ['search', { size: 14 }],
     refreshIcon: ['refresh', {}],
@@ -61,6 +60,8 @@ function injectIcons() {
     bulkDeleteIcon: ['trash', { size: 12 }],
     rateLimitIcon: ['shield', {}],
     cmdPaletteIcon: ['command', { size: 14 }],
+    securityErrorIcon: ['alertTriangle', { size: 40 }],
+    frameCloseIcon: ['x', { size: 14 }],
   };
   for (const [id, [name, opts]] of Object.entries(map)) {
     const el = document.getElementById(id);
@@ -249,7 +250,11 @@ function renderRepos() {
   if (s.allRepos.length === 0 && !s.loading) {
     listEl.classList.add('hidden');
     emptyEl.classList.remove('hidden');
-    document.getElementById('emptyIcon').innerHTML = icon('hammer', { size: 40, className: 'opacity-30' });
+    if (!s.token) {
+      document.getElementById('emptyIcon').innerHTML = `<img src="../icons/icon-128.png" class="w-16 h-16 object-contain opacity-40 mx-auto" alt="ForgeHelm logo">`;
+    } else {
+      document.getElementById('emptyIcon').innerHTML = `<img src="../icons/icon-128.png" class="w-12 h-12 object-contain opacity-25 mx-auto" alt="ForgeHelm logo">`;
+    }
     document.getElementById('emptyTitle').textContent = s.token ? 'No repositories found' : 'Welcome to ForgeHelm';
     document.getElementById('emptyDesc').textContent = s.token
       ? 'Your account has no owned repositories.'
@@ -289,12 +294,15 @@ function updateBulkBar() {
   const s = state.get();
   const bar = document.getElementById('bulkBar');
   const countEl = document.getElementById('selectedCount');
+  const listEl = document.getElementById('repoList');
 
   if (s.selected.size > 0) {
     bar.classList.remove('hidden');
     countEl.textContent = `${s.selected.size} selected`;
+    if (listEl) listEl.classList.add('pb-28');
   } else {
     bar.classList.add('hidden');
+    if (listEl) listEl.classList.remove('pb-28');
   }
 }
 
@@ -336,8 +344,10 @@ async function fetchCiStatuses(repos) {
 
 async function handleSaveToken() {
   const input = document.getElementById('tokenInput');
+  const pinInput = document.getElementById('settingsPinInput');
   const statusEl = document.getElementById('tokenStatus');
   const t = input.value.trim();
+  const p = pinInput.value.trim();
 
   if (!t) {
     statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-red-subtle text-fh-red';
@@ -346,11 +356,18 @@ async function handleSaveToken() {
     return;
   }
 
+  if (p.length !== 4) {
+    statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-red-subtle text-fh-red';
+    statusEl.textContent = 'Please enter a 4-digit security PIN';
+    statusEl.classList.remove('hidden');
+    return;
+  }
+
   statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-accent-subtle text-fh-accent flex items-center gap-1';
-  statusEl.innerHTML = `<span class="animate-spin-slow">${icon('loader', { size: 12 })}</span> Validating…`;
+  statusEl.innerHTML = `<span class="animate-spin-slow">${icon('loader', { size: 12 })}</span> Validating & encrypting…`;
   statusEl.classList.remove('hidden');
 
-  const res = await send('VALIDATE_TOKEN', { token: t });
+  const res = await send('SET_TOKEN_ENCRYPTED', { token: t, pin: p });
 
   if (res.ok) {
     const user = res.data;
@@ -369,20 +386,21 @@ async function handleSaveToken() {
         statusEl.textContent = `Authenticated as @${user.login}. Missing scope(s): ${missing.join(', ')}`;
         showToast(`Token warning: missing ${missing.join(', ')}`, 'warning');
       } else {
-        statusEl.textContent = `Authenticated as @${user.login} · scope check passed (repo + delete_repo)`;
+        statusEl.textContent = `Authenticated as @${user.login} · token encrypted successfully`;
       }
     } else {
-      statusEl.textContent = `Authenticated as @${user.login} (scope check unavailable)`;
+      statusEl.textContent = `Authenticated as @${user.login} · token encrypted successfully`;
     }
 
+    pinInput.value = '';
     showUserBadge(user);
     showToast(`Welcome, ${user.login}!`, 'success');
     setTimeout(() => toggleSettings(false), 800);
     loadRepos();
   } else {
     statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-red-subtle text-fh-red';
-    statusEl.textContent = res.error || 'Invalid token';
-    showToast('Token validation failed', 'error');
+    statusEl.textContent = res.error || 'Token validation or encryption failed';
+    showToast('Failed to save encrypted token', 'error');
   }
 }
 
@@ -413,6 +431,176 @@ function toggleSettings(force) {
   const isOpen = force !== undefined ? force : panel.classList.contains('hidden');
   state.set({ settingsOpen: isOpen });
   panel.classList.toggle('hidden', !isOpen);
+  if (isOpen) {
+    updatePinSettingsUI();
+  }
+}
+
+async function updatePinSettingsUI() {
+  const hasPinRes = await send('HAS_PIN_CREATED');
+  const labelEl = document.getElementById('pinSettingsLabel');
+  const pinInput = document.getElementById('settingsPinInput');
+  const bannerEl = document.getElementById('migrationBanner');
+  
+  if (!labelEl || !pinInput || !bannerEl) return;
+  
+  const hasPin = hasPinRes.ok && hasPinRes.data;
+  if (hasPin) {
+    labelEl.textContent = 'Enter current 4-digit PIN to save updates';
+    pinInput.placeholder = '••••';
+    bannerEl.classList.add('hidden');
+  } else {
+    labelEl.textContent = 'Create a 4-digit PIN to encrypt token';
+    pinInput.placeholder = 'Set PIN';
+    
+    // Check for legacy token
+    const legacyRes = await send('HAS_LEGACY_TOKEN');
+    if (legacyRes.ok && legacyRes.data) {
+      bannerEl.classList.remove('hidden');
+    } else {
+      bannerEl.classList.add('hidden');
+    }
+  }
+
+  // Load and sync autoLockTimeout setting
+  const autoLockSelect = document.getElementById('autoLockSelect');
+  if (autoLockSelect) {
+    const settingsRes = await send('GET_SETTINGS');
+    if (settingsRes.ok && settingsRes.data) {
+      autoLockSelect.value = settingsRes.data.autoLockTimeout !== undefined ? settingsRes.data.autoLockTimeout : 0;
+    }
+  }
+
+  // Load and sync launcher checkbox setting
+  const launcherCheckbox = document.getElementById('launcherCheckbox');
+  if (launcherCheckbox) {
+    const settingsRes = await send('GET_SETTINGS');
+    if (settingsRes.ok && settingsRes.data) {
+      launcherCheckbox.checked = settingsRes.data.showFloatingLauncher !== false;
+    }
+  }
+
+  // Update token capabilities
+  const capPanel = document.getElementById('capabilitiesPanel');
+  if (capPanel) {
+    const activeToken = state.get().token;
+    if (activeToken) {
+      const capsRes = await send('CHECK_TOKEN_CAPABILITIES', { token: activeToken });
+      if (capsRes.ok && capsRes.data) {
+        const caps = capsRes.data;
+        capPanel.classList.remove('hidden');
+        
+        const typeEl = document.getElementById('capTokenType');
+        if (typeEl) {
+          typeEl.textContent = caps.tokenType || 'unknown';
+        }
+        
+        const repoIndicator = document.getElementById('capScopeRepo');
+        if (repoIndicator) {
+          repoIndicator.className = `w-2 h-2 rounded-full transition-colors ${caps.scopes.repo ? 'bg-fh-green' : 'bg-fh-red'}`;
+        }
+        
+        const deleteIndicator = document.getElementById('capScopeDelete');
+        if (deleteIndicator) {
+          deleteIndicator.className = `w-2 h-2 rounded-full transition-colors ${caps.scopes.delete_repo ? 'bg-fh-green' : 'bg-fh-red'}`;
+        }
+        
+        const warnEl = document.getElementById('capWarnings');
+        if (warnEl) {
+          const missing = [];
+          if (!caps.scopes.repo) missing.push('repo');
+          if (!caps.scopes.delete_repo) missing.push('delete_repo');
+          
+          if (missing.length > 0) {
+            warnEl.textContent = `⚠️ Missing scope: ${missing.join(', ')}`;
+            warnEl.classList.remove('hidden');
+          } else {
+            warnEl.classList.add('hidden');
+          }
+        }
+      } else {
+        capPanel.classList.add('hidden');
+      }
+    } else {
+      capPanel.classList.add('hidden');
+    }
+  }
+}
+
+function showUnlockScreen() {
+  const el = document.getElementById('unlockScreen');
+  if (el) el.classList.remove('hidden');
+  const pinInput = document.getElementById('unlockPinInput');
+  if (pinInput) {
+    pinInput.value = '';
+    pinInput.focus();
+  }
+}
+
+async function handleUnlock() {
+  const pinInput = document.getElementById('unlockPinInput');
+  const pin = pinInput.value.trim();
+  const errEl = document.getElementById('unlockError');
+  
+  if (pin.length !== 4) {
+    errEl.textContent = 'PIN must be 4 digits';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  
+  errEl.classList.add('hidden');
+  const unlockBtn = document.getElementById('unlockBtn');
+  unlockBtn.disabled = true;
+  unlockBtn.textContent = 'Unlocking...';
+  
+  const res = await send('UNLOCK_TOKEN', { pin });
+  unlockBtn.disabled = false;
+  unlockBtn.textContent = 'Unlock';
+  
+  if (res.ok) {
+    const user = res.data;
+    state.set({ token: res.token, user });
+    document.getElementById('unlockScreen').classList.add('hidden');
+    showUserBadge(user);
+    loadRepos();
+    refreshRateLimit();
+    showToast(`Welcome back!`, 'success');
+    
+    // Sync settings token input field
+    const tokenRes = await send('GET_TOKEN');
+    if (tokenRes.ok && tokenRes.data?.token) {
+      document.getElementById('tokenInput').value = tokenRes.data.token;
+    }
+  } else {
+    errEl.textContent = res.error || 'Incorrect PIN';
+    errEl.classList.remove('hidden');
+    pinInput.value = '';
+    pinInput.focus();
+  }
+}
+
+async function handleForgotPin() {
+  showModal({
+    title: 'Clear Storage?',
+    body: '<p class="text-fh-red font-medium">This will clear your saved GitHub token and PIN.</p><p class="text-fh-text-muted mt-1">You will need to configure your GitHub token and set a new PIN again.</p>',
+    confirmText: 'Clear Everything',
+    confirmClass: 'fh-btn-danger',
+    dangerous: true,
+    onConfirm: async () => {
+      await send('CLEAR_TOKEN');
+      document.getElementById('unlockScreen').classList.add('hidden');
+      toggleSettings(true);
+      loadRepos();
+      showToast('Storage cleared. Please set up a new token.', 'info');
+    }
+  });
+}
+
+function showSecurityBlockedScreen() {
+  const el = document.getElementById('securityBlockedScreen');
+  if (el) el.classList.remove('hidden');
+  const iconEl = document.getElementById('securityErrorIcon');
+  if (iconEl) iconEl.innerHTML = icon('alertTriangle', { size: 40 });
 }
 
 function toggleTokenVisibility() {
@@ -1056,6 +1244,39 @@ function bindEvents() {
   document.getElementById('tokenToggleBtn').addEventListener('click', toggleTokenVisibility);
   document.getElementById('refreshBtn').addEventListener('click', loadRepos);
 
+  const autoLockSelect = document.getElementById('autoLockSelect');
+  if (autoLockSelect) {
+    autoLockSelect.addEventListener('change', async (e) => {
+      const res = await send('GET_SETTINGS');
+      if (res.ok) {
+        const settings = res.data || {};
+        settings.autoLockTimeout = parseInt(e.target.value, 10);
+        await send('SAVE_SETTINGS', { settings });
+        showToast('Auto-lock setting updated', 'success');
+      }
+    });
+  }
+
+  const launcherCheckbox = document.getElementById('launcherCheckbox');
+  if (launcherCheckbox) {
+    launcherCheckbox.addEventListener('change', async (e) => {
+      const res = await send('GET_SETTINGS');
+      if (res.ok) {
+        const settings = res.data || {};
+        settings.showFloatingLauncher = e.target.checked;
+        await send('SAVE_SETTINGS', { settings });
+        showToast('Launcher preference updated', 'success');
+      }
+    });
+  }
+
+  const frameCloseBtn = document.getElementById('frameCloseBtn');
+  if (frameCloseBtn) {
+    frameCloseBtn.addEventListener('click', () => {
+      window.parent.postMessage({ type: 'FH_CLOSE_SIDEBAR' }, '*');
+    });
+  }
+
   const themeBtn = document.getElementById('themeBtn');
   if (themeBtn) themeBtn.addEventListener('click', handleThemeToggle);
 
@@ -1068,6 +1289,26 @@ function bindEvents() {
   document.getElementById('tokenInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSaveToken();
   });
+
+  const settingsPinInput = document.getElementById('settingsPinInput');
+  if (settingsPinInput) {
+    settingsPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSaveToken();
+    });
+  }
+
+  const unlockBtn = document.getElementById('unlockBtn');
+  if (unlockBtn) unlockBtn.addEventListener('click', handleUnlock);
+
+  const forgotPinBtn = document.getElementById('forgotPinBtn');
+  if (forgotPinBtn) forgotPinBtn.addEventListener('click', handleForgotPin);
+
+  const unlockPinInput = document.getElementById('unlockPinInput');
+  if (unlockPinInput) {
+    unlockPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleUnlock();
+    });
+  }
 
   const debouncedRender = debounce(() => { renderRepos(); updateBulkBar(); }, 150);
 
@@ -1220,6 +1461,33 @@ async function init() {
   initCommandPalette();
   bindEvents();
 
+  // 1. Check framed context & challenge handshake
+  const isFramed = window.self !== window.top;
+  if (isFramed) {
+    const closeBtn = document.getElementById('frameCloseBtn');
+    if (closeBtn) closeBtn.classList.remove('hidden');
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const challenge = urlParams.get('challenge');
+    if (!challenge) {
+      showSecurityBlockedScreen();
+      return;
+    }
+    const handshakeRes = await send('VERIFY_CHALLENGE', { challenge });
+    if (!handshakeRes.ok || !handshakeRes.data) {
+      showSecurityBlockedScreen();
+      return;
+    }
+  }
+
+  // 2. Check lock state
+  const isLockedRes = await send('IS_LOCKED');
+  if (isLockedRes.ok && isLockedRes.data) {
+    showUnlockScreen();
+    return;
+  }
+
+  // 3. Normal token loading
   const tokenRes = await send('GET_TOKEN');
   if (tokenRes.ok && tokenRes.data?.token) {
     state.set({ token: tokenRes.data.token });
@@ -1236,6 +1504,29 @@ async function init() {
       showToast('Token expired or invalid. Please update.', 'warning');
     }
   } else {
+    // If PIN is not set up but we have a legacy token, we can still load it or prompt settings
+    const hasPinRes = await send('HAS_PIN_CREATED');
+    if (hasPinRes.ok && !hasPinRes.data) {
+      // Check if they have a legacy token
+      const legacyRes = await send('HAS_LEGACY_TOKEN');
+      if (legacyRes.ok && legacyRes.data) {
+        // We have a legacy token. Load it and display migration warning
+        const legacyTokenRes = await send('GET_TOKEN');
+        if (legacyTokenRes.ok && legacyTokenRes.data?.token) {
+          state.set({ token: legacyTokenRes.data.token });
+          const validateRes = await send('VALIDATE_TOKEN', { token: legacyTokenRes.data.token });
+          if (validateRes.ok) {
+            state.set({ user: validateRes.data });
+            showUserBadge(validateRes.data);
+            loadRepos();
+            refreshRateLimit();
+            toggleSettings(true); // Open settings to show migration banner
+            return;
+          }
+        }
+      }
+    }
+    
     toggleSettings(true);
     renderRepos();
   }

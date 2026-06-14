@@ -12,3 +12,5 @@ Thumbs.db
 .claude/
 .omc/
 .vscode/
+.agents/
+skills-lock.json
