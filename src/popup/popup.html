@@ -15,7 +15,7 @@
     <div class="flex items-center gap-2">
       <img src="../icons/icon-48.png" class="w-5 h-5 object-contain" alt="ForgeHelm logo">
       <h1 class="text-sm font-semibold tracking-tight">ForgeHelm</h1>
-      <span class="fh-badge border-fh-accent/20 bg-fh-accent-subtle text-fh-accent text-2xs">v1.0</span>
+      <span class="fh-badge border-fh-accent/20 bg-fh-accent-subtle text-fh-accent text-2xs">v1.1</span>
     </div>
     <div class="flex items-center gap-1">
       <span id="userBadge" class="hidden items-center gap-1.5 px-2 py-0.5 text-2xs font-medium rounded-full bg-fh-overlay border border-fh-border text-fh-text-secondary">
@@ -62,6 +62,9 @@
           <span id="tokenToggleIcon"></span>
         </button>
       </div>
+      <p class="text-[10px] text-fh-text-muted mt-1 leading-normal select-none">
+        💡 Note: Token requires <code class="font-mono bg-fh-overlay text-fh-accent px-1 rounded">repo</code> scope for bulk actions, and <code class="font-mono bg-fh-overlay text-fh-red px-1 rounded">delete_repo</code> to delete repositories.
+      </p>
       <div id="pinSettingsGroup" class="space-y-1">
         <label id="pinSettingsLabel" class="text-2xs text-fh-text-muted block font-medium">Create a 4-digit PIN to encrypt token</label>
         <input id="settingsPinInput" type="password" maxlength="4" placeholder="••••"
@@ -188,6 +191,9 @@
         <button id="bulkDescriptionBtn" class="fh-btn-secondary text-2xs px-2 py-1" title="Edit Description" aria-label="Edit descriptions of selected repositories">
           <span id="bulkDescriptionIcon"></span> Desc
         </button>
+        <button id="bulkFilesBtn" class="fh-btn-secondary text-2xs px-2 py-1" title="Commit File" aria-label="Commit file to selected repositories">
+          <span id="bulkFilesIcon"></span> Files
+        </button>
         <button id="bulkTransferBtn" class="fh-btn-secondary text-2xs px-2 py-1" title="Transfer" aria-label="Transfer selected repositories">
           <span id="bulkTransferIcon"></span> Xfer
         </button>
@@ -245,7 +251,7 @@
 
   <footer class="px-4 py-1.5 border-t border-fh-border bg-fh-surface text-center shrink-0" role="contentinfo">
     <div class="flex items-center justify-center gap-2">
-      <span class="text-2xs text-fh-text-muted">ForgeHelm v1.0.0</span>
+      <span class="text-2xs text-fh-text-muted">ForgeHelm v1.1.0</span>
       <span class="text-fh-border">·</span>
       <a href="https://github.com/ThanhNguyxnOrg/ForgeHelm" target="_blank" rel="noopener"
          class="text-2xs text-fh-text-muted hover:text-fh-accent transition-colors" aria-label="View on GitHub">GitHub</a>

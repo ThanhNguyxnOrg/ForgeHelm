@@ -275,6 +275,35 @@ class GitHubClient {
   async fetchRateLimit() {
     return this.getJson('/rate_limit');
   }
+
+  async createOrUpdateFile(fullName, path, content, commitMessage) {
+    let sha = null;
+    try {
+      const res = await this.getJson(`/repos/${fullName}/contents/${path}`);
+      if (res && res.sha) {
+        sha = res.sha;
+      }
+    } catch (err) {
+      if (err.status !== 404) {
+        throw err;
+      }
+    }
+
+    const base64Content = btoa(unescape(encodeURIComponent(content)));
+    const body = {
+      message: commitMessage || `Update ${path} via ForgeHelm`,
+      content: base64Content,
+    };
+    if (sha) {
+      body.sha = sha;
+    }
+
+    const res = await this.request(`/repos/${fullName}/contents/${path}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
 }
 
 export const github = new GitHubClient();

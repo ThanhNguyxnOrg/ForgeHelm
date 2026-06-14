@@ -77,7 +77,66 @@ describe('GitHubClient token validation logic', () => {
     }));
 
     github.setToken('test_token');
-
     await expect(github.forkRepo('owner/repo')).resolves.toEqual({});
+  });
+
+  test('createOrUpdateFile should create a new file when it does not exist (GET returns 404)', async () => {
+    let putRequestPayload = null;
+    globalThis.fetch.mockImplementation((url, opts) => {
+      if (opts.method === 'PUT') {
+        putRequestPayload = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          headers: new Headers(),
+          json: () => Promise.resolve({ content: { name: 'LICENSE' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        headers: new Headers(),
+        json: () => Promise.resolve({ message: 'Not Found' }),
+      });
+    });
+
+    github.setToken('test_token');
+    const result = await github.createOrUpdateFile('owner/repo', 'LICENSE', 'MIT Content', 'add license');
+    
+    expect(result.content.name).toBe('LICENSE');
+    expect(putRequestPayload).toBeDefined();
+    expect(putRequestPayload.sha).toBeUndefined();
+    expect(putRequestPayload.message).toBe('add license');
+    expect(atob(putRequestPayload.content)).toBe('MIT Content');
+  });
+
+  test('createOrUpdateFile should update an existing file with sha (GET returns 200 with sha)', async () => {
+    let putRequestPayload = null;
+    globalThis.fetch.mockImplementation((url, opts) => {
+      if (opts.method === 'PUT') {
+        putRequestPayload = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: () => Promise.resolve({ content: { name: 'LICENSE' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: () => Promise.resolve({ sha: 'old-sha-123', name: 'LICENSE' }),
+      });
+    });
+
+    github.setToken('test_token');
+    const result = await github.createOrUpdateFile('owner/repo', 'LICENSE', 'Updated MIT Content', 'update license');
+    
+    expect(result.content.name).toBe('LICENSE');
+    expect(putRequestPayload).toBeDefined();
+    expect(putRequestPayload.sha).toBe('old-sha-123');
+    expect(putRequestPayload.message).toBe('update license');
+    expect(atob(putRequestPayload.content)).toBe('Updated MIT Content');
   });
 });

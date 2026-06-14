@@ -248,6 +248,11 @@ router.register('EXPORT_REPOS', async () => {
   return github.fetchAllRepos();
 });
 
+router.register('CREATE_OR_UPDATE_FILE', async ({ fullName, path, content, commitMessage }) => {
+  await ensureToken();
+  return github.createOrUpdateFile(fullName, path, content, commitMessage);
+});
+
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     logger.info('ForgeHelm installed');

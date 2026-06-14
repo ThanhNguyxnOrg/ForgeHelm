@@ -36,14 +36,20 @@
     crypto.getRandomValues(array);
     const challenge = Array.from(array, dec => dec.toString(16).padStart(8, '0')).join('');
 
-    chrome.runtime.sendMessage({ type: 'REGISTER_CHALLENGE', payload: { challenge } });
-
     panel = document.createElement('div');
     panel.className = 'fh-panel';
-    panel.innerHTML = `
-      <iframe class="fh-panel-iframe" src="${chrome.runtime.getURL('popup/popup.html')}?challenge=${challenge}"></iframe>
-    `;
     shadow.appendChild(panel);
+
+    chrome.runtime.sendMessage(
+      { type: 'REGISTER_CHALLENGE', payload: { challenge } },
+      () => {
+        if (panel) {
+          panel.innerHTML = `
+            <iframe class="fh-panel-iframe" src="${chrome.runtime.getURL('popup/popup.html')}?challenge=${challenge}"></iframe>
+          `;
+        }
+      }
+    );
 
     function toggle() {
       isOpen = !isOpen;

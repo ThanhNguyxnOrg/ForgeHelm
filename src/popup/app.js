@@ -55,6 +55,7 @@ function injectIcons() {
     bulkArchiveIcon: ['archive', { size: 12 }],
     bulkTopicsIcon: ['tag', { size: 12 }],
     bulkDescriptionIcon: ['edit', { size: 12 }],
+    bulkFilesIcon: ['file', { size: 12 }],
     bulkTransferIcon: ['send', { size: 12 }],
     bulkForkIcon: ['fork', { size: 12 }],
     bulkDeleteIcon: ['trash', { size: 12 }],
@@ -1060,6 +1061,132 @@ function handleBulkArchive() {
   });
 }
 
+function handleBulkFiles() {
+  const count = state.get().selected.size;
+  showModal({
+    title: `Commit File to ${count} Repos`,
+    body: `<div class="space-y-3">
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1">Select Template</label>
+               <select id="fileTemplateSelect" class="fh-select text-xs w-full">
+                 <option value="custom">Custom (Blank)</option>
+                 <option value="mit">MIT License</option>
+                 <option value="gitignore-node">Node.js .gitignore</option>
+                 <option value="gitignore-python">Python .gitignore</option>
+                 <option value="readme">Simple README.md</option>
+                 <option value="ci-workflow">Node.js CI Workflow</option>
+               </select>
+             </div>
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1">File Path</label>
+               <input id="filePathInput" data-field="path" type="text" class="fh-input text-xs font-mono" placeholder="LICENSE" autocomplete="off" spellcheck="false" required>
+             </div>
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1">File Content</label>
+               <textarea id="fileContentInput" data-field="content" rows="6" class="fh-input text-xs font-mono w-full resize-y h-24 whitespace-pre" placeholder="Enter file content..." autocomplete="off" spellcheck="false" required></textarea>
+             </div>
+             <div>
+               <label class="text-2xs text-fh-text-muted block mb-1">Commit Message</label>
+               <input id="fileMessageInput" data-field="commitMessage" type="text" class="fh-input text-xs" placeholder="docs: add LICENSE" autocomplete="off" spellcheck="false" required>
+             </div>
+           </div>`,
+    confirmText: `Commit to ${count} Repos`,
+    confirmClass: 'fh-btn-primary',
+    onConfirm: async (formData) => {
+      const path = (formData.path || '').trim();
+      const content = formData.content || '';
+      const commitMessage = (formData.commitMessage || '').trim();
+
+      if (!path || !content || !commitMessage) {
+        showToast('Please fill in path, content, and commit message.', 'error');
+        return;
+      }
+
+      const targets = [...state.get().selected];
+      let done = 0;
+      let failed = 0;
+
+      for (const fullName of targets) {
+        state.markBusy(fullName);
+        renderRepos();
+        showProgress('Commit File', done, targets.length);
+
+        try {
+          const repoName = fullName.split('/')[1];
+          const owner = fullName.split('/')[0];
+          const resolvedContent = content
+            .replace(/\[YEAR\]/g, new Date().getFullYear())
+            .replace(/\[OWNER\]/g, owner)
+            .replace(/\[REPO_NAME\]/g, repoName)
+            .replace(/\[FULL_NAME\]/g, fullName);
+
+          const res = await send('CREATE_OR_UPDATE_FILE', {
+            fullName,
+            path,
+            content: resolvedContent,
+            commitMessage,
+          });
+
+          if (!res.ok) throw new Error(res.error);
+          done++;
+        } catch (err) {
+          failed++;
+        }
+
+        state.unmarkBusy(fullName);
+        showProgress('Commit File', done + failed, targets.length);
+      }
+
+      hideProgress();
+      state.deselectAll();
+      renderRepos();
+      updateBulkBar();
+
+      if (failed === 0) {
+        showToast(`File committed to ${done} repos`, 'success');
+      } else {
+        showToast(`Commit: ${done} done, ${failed} failed`, 'warning');
+      }
+    },
+  });
+
+  const templateSelect = document.getElementById('fileTemplateSelect');
+  const pathInput = document.getElementById('filePathInput');
+  const contentInput = document.getElementById('fileContentInput');
+  const messageInput = document.getElementById('fileMessageInput');
+
+  if (templateSelect && pathInput && contentInput && messageInput) {
+    templateSelect.addEventListener('change', (e) => {
+      const selected = e.target.value;
+      if (selected === 'mit') {
+        pathInput.value = 'LICENSE';
+        contentInput.value = `MIT License\n\nCopyright (c) [YEAR] [OWNER]\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the "Software"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.`;
+        messageInput.value = 'docs: add MIT license';
+      } else if (selected === 'gitignore-node') {
+        pathInput.value = '.gitignore';
+        contentInput.value = `# Logs\nlogs\n*.log\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\n\n# Dependency directories\nnode_modules/\njspm_packages/\n\n# Optional npm cache directory\n.npm\n\n# Output / distribution\ndist/\nbuild/\n\n# Environment variables\n.env\n.env.local\n.env.development.local\n.env.test.local\n.env.production.local\n\n# IDEs\n.vscode/\n.idea/\n*.suo\n*.ntvs*\n*.njsproj\n*.sln\n*.sw?`;
+        messageInput.value = 'chore: add Node.js .gitignore';
+      } else if (selected === 'gitignore-python') {
+        pathInput.value = '.gitignore';
+        contentInput.value = `# Byte-compiled / optimized / DLL files\n__pycache__/\n*.py[cod]\n*$py.class\n\n# C extensions\n*.so\n\n# Distribution / packaging\nbuild/\ndevelop-eggs/\ndist/\ndownloads/\neggs/\n.eggs/\nlib/\nlib64/\nparts/\nsbin/\nvar/\nwheels/\nshare/python-wheels/\n*.egg-info/\n.installed.cfg\n*.egg\nMANIFEST\n\n# Installer logs\npip-log.txt\npip-delete-this-directory.txt\n\n# Unit test / coverage reports\nhtmlcov/\n.tox/\n.nosexyproject\n.coverage\n.coverage.*\n.cache\nnosetests.xml\ncoverage.xml\n*.cover\n*.py,cover\n.hypothesis/\n.pytest_cache/\n\n# Translation\n*.mo\n*.pot\n\n# Django stuff:\n*.log\nlocal_settings.py\ndb.sqlite3\ndb.sqlite3-journal\n\n# Flask stuff:\ninstance/\n.webassets-cache\n\n# Virtual environments\nvenv/\n.venv/\nenv/\nENV/\nenv.bak/\nvenv.bak/`;
+        messageInput.value = 'chore: add Python .gitignore';
+      } else if (selected === 'readme') {
+        pathInput.value = 'README.md';
+        contentInput.value = `# [REPO_NAME]\n\nA new repository created/managed via ForgeHelm.\n\n## Setup\n\nClone the repository:\n\`\`\`bash\ngit clone https://github.com/[FULL_NAME].git\n\`\`\`\n\n## License\n\nMIT`;
+        messageInput.value = 'docs: add README';
+      } else if (selected === 'ci-workflow') {
+        pathInput.value = '.github/workflows/ci.yml';
+        contentInput.value = `name: Node.js CI\n\non:\n  push:\n    branches: [ main, master ]\n  pull_request:\n    branches: [ main, master ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n    - name: Use Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20'\n        cache: 'npm'\n    - run: npm ci\n    - run: npm run build --if-present\n    - run: npm test --if-present`;
+        messageInput.value = 'chore: add Node.js GitHub Actions workflow';
+      } else {
+        pathInput.value = '';
+        contentInput.value = '';
+        messageInput.value = '';
+      }
+    });
+  }
+}
+
 function handleBulkDelete() {
   const count = state.get().selected.size;
   runBulkAction('Delete', async (fn) => {
@@ -1411,6 +1538,7 @@ function bindEvents() {
   document.getElementById('bulkTransferBtn').addEventListener('click', handleBulkTransfer);
   document.getElementById('bulkForkBtn').addEventListener('click', handleBulkFork);
   document.getElementById('bulkDescriptionBtn').addEventListener('click', handleBulkDescription);
+  document.getElementById('bulkFilesBtn').addEventListener('click', handleBulkFiles);
   document.getElementById('bulkDeleteBtn').addEventListener('click', handleBulkDelete);
 
   document.addEventListener('keydown', (e) => {
