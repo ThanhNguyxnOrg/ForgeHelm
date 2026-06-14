@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/ThanhNguyxnOrg/ForgeHelm/main/assets/banner.png" alt="ForgeHelm Banner" width="100%" />
-
-<p align="center">
-  <img src="src/icons/icon-128.png" alt="ForgeHelm Logo" width="80" height="80" />
-</p>
+<img src="https://raw.githubusercontent.com/ThanhNguyxnOrg/ForgeHelm/main/assets/banner.png?v=1.0.1" alt="ForgeHelm Banner" width="100%" />
 
 # ForgeHelm
 
