@@ -2,10 +2,6 @@
 
 <img src="https://raw.githubusercontent.com/ThanhNguyxnOrg/ForgeHelm/main/assets/banner.png?v=1.0.1" alt="ForgeHelm Banner" width="100%" />
 
-# ForgeHelm
-
-**The Ultimate Chrome Extension for Bulk GitHub Repository Management**
-
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/ThanhNguyxnOrg/ForgeHelm)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-00C853?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![GitHub API](https://img.shields.io/badge/GitHub-API%20v3-181717?style=for-the-badge&logo=github&logoColor=white)](https://docs.github.com/en/rest)
