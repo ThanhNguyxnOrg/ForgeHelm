@@ -2,6 +2,7 @@ import { icon } from '../lib/icons.js';
 import { escapeHtml, relativeTime, formatNumber } from '../lib/utils.js';
 
 export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
+  const ownerLogin = repo.owner?.login || (repo.full_name ? repo.full_name.split('/')[0] : '');
   const badgeClass = repo.private ? 'fh-badge-private' : 'fh-badge-public';
   const badgeLabel = repo.private ? 'Private' : 'Public';
   const badgeIcon = repo.private ? icon('lock', { size: 10 }) : icon('globe', { size: 10 });
@@ -50,8 +51,8 @@ export function renderRepoCard(repo, isSelected, isBusy, isPendingDelete) {
           <div class="flex items-center gap-1.5 flex-wrap">
             <a href="https://github.com/${escapeHtml(repo.full_name)}" target="_blank" rel="noopener"
                class="text-sm font-semibold text-fh-accent hover:underline truncate"
-               aria-label="Open ${escapeHtml(repo.name)} on GitHub">
-              ${escapeHtml(repo.name)}
+               aria-label="Open ${escapeHtml(repo.full_name || repo.name)} on GitHub">
+              ${ownerLogin ? `<span class="text-fh-text-muted font-normal">${escapeHtml(ownerLogin)}/</span>` : ''}${escapeHtml(repo.name)}
             </a>
             <span class="${badgeClass}">${badgeIcon} ${badgeLabel}</span>
             ${archivedBadge}

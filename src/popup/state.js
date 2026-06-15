@@ -79,7 +79,7 @@ export function createState() {
       const q = search.toLowerCase();
 
       let filtered = allRepos.filter((r) => {
-        if (q && !r.name.toLowerCase().includes(q) && !(r.description || '').toLowerCase().includes(q)) {
+        if (q && !r.name.toLowerCase().includes(q) && !r.full_name.toLowerCase().includes(q) && !(r.description || '').toLowerCase().includes(q)) {
           return false;
         }
         if (visibility === 'public' && r.private) return false;

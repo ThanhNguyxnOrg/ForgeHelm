@@ -102,7 +102,7 @@ class GitHubClient {
     try {
       const user = await this.getJson('/user');
       try {
-        await this.request('/user/repos?per_page=1&affiliation=owner');
+        await this.request('/user/repos?per_page=1&affiliation=owner,collaborator,organization_member');
       } catch (scopeErr) {
         if (scopeErr.status === 403) {
           throw new TokenError('Token lacks repository access. Enable "repo" scope for classic PAT, or "Administration" permission for fine-grained PAT.');
@@ -170,7 +170,7 @@ class GitHubClient {
     while (true) {
       if (signal?.aborted) break;
       const res = await this.request(
-        `/user/repos?per_page=${PER_PAGE}&page=${page}&sort=updated&affiliation=owner`
+        `/user/repos?per_page=${PER_PAGE}&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`
       );
       const batch = await res.json();
       repos.push(...batch);
