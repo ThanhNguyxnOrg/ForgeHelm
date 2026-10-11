@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="src/icons/icon-128.png" alt="ForgeHelm logo" width="96" />
+
 <img src="https://raw.githubusercontent.com/ThanhNguyxnOrg/ForgeHelm/main/assets/banner.png?v=1.0.1" alt="ForgeHelm Banner" width="100%" />
 
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/ThanhNguyxnOrg/ForgeHelm)
