@@ -5,8 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --minify",
-    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --watch",
+    "build:css": "npm exec --yes --package=@tailwindcss/cli@4.3.4 -- tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --minify",
+    "watch:css": "npm exec --yes --package=@tailwindcss/cli@4.3.4 -- tailwindcss -i ./src/styles/input.css -o ./src/styles/output.css --watch",
     "dev": "npm run watch:css",
     "build": "npm run build:css",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
