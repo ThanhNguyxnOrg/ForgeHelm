@@ -2,6 +2,39 @@
 @import "tailwindcss";
 @config "../../tailwind.config.cjs";
 
+@utility fh-btn {
+@apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5
+       text-xs font-medium rounded-md border
+       transition-all duration-150 cursor-pointer select-none
+       focus-visible:outline-none focus-visible:ring-2
+       focus-visible:ring-offset-1 focus-visible:ring-offset-fh-bg
+       active:scale-[0.97];
+}
+
+@utility fh-btn-icon {
+@apply fh-btn p-1.5 bg-transparent border-transparent text-fh-text-secondary
+       hover:bg-fh-overlay hover:text-fh-text rounded-lg;
+}
+
+@utility fh-input {
+@apply w-full px-3 py-1.5 text-sm rounded-lg
+       bg-fh-bg border border-fh-border text-fh-text
+       placeholder:text-fh-text-muted
+       focus:outline-none focus:border-fh-accent focus:ring-1 focus:ring-fh-accent
+       focus:shadow-fh-glow
+       transition-all duration-150;
+}
+
+@utility fh-card {
+@apply bg-fh-surface border border-fh-border rounded-lg
+       transition-all duration-150;
+}
+
+@utility fh-badge {
+@apply inline-flex items-center gap-1 px-2 py-0.5 text-2xs font-medium
+       rounded-full border leading-none;
+}
+
 @layer base {
 
   /* ── Theme variables ── */
@@ -117,14 +150,7 @@
 
   /* ── Buttons ── */
 
-  .fh-btn {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5
-           text-xs font-medium rounded-md border
-           transition-all duration-150 cursor-pointer select-none
-           focus-visible:outline-none focus-visible:ring-2
-           focus-visible:ring-offset-1 focus-visible:ring-offset-fh-bg
-           active:scale-[0.97];
-  }
+
 
   .fh-btn-primary {
     @apply fh-btn bg-fh-green-muted border-transparent text-white
@@ -150,21 +176,11 @@
            focus-visible:ring-fh-accent;
   }
 
-  .fh-btn-icon {
-    @apply fh-btn p-1.5 bg-transparent border-transparent text-fh-text-secondary
-           hover:bg-fh-overlay hover:text-fh-text rounded-lg;
-  }
+
 
   /* ── Inputs ── */
 
-  .fh-input {
-    @apply w-full px-3 py-1.5 text-sm rounded-lg
-           bg-fh-bg border border-fh-border text-fh-text
-           placeholder:text-fh-text-muted
-           focus:outline-none focus:border-fh-accent focus:ring-1 focus:ring-fh-accent
-           focus:shadow-fh-glow
-           transition-all duration-150;
-  }
+
 
   .fh-select {
     @apply fh-input appearance-none cursor-pointer pr-8;
@@ -176,10 +192,7 @@
 
   /* ── Cards ── */
 
-  .fh-card {
-    @apply bg-fh-surface border border-fh-border rounded-lg
-           transition-all duration-150;
-  }
+
 
   .fh-card-interactive {
     @apply fh-card
@@ -214,10 +227,7 @@
 
   /* ── Badges ── */
 
-  .fh-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-2xs font-medium
-           rounded-full border leading-none;
-  }
+
 
   .fh-badge-public {
     @apply fh-badge border-fh-green/20 bg-fh-green-subtle text-fh-green;
