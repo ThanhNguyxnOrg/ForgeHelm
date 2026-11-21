@@ -191,7 +191,7 @@ Select repos → Choose action → Confirm → Watch progress → Done ✅
 Each destructive action requires explicit confirmation:
 - **Visibility change**: Simple confirm dialog
 - **Archive**: Confirm dialog with warning
-- **Delete**: Must type exact confirmation text
+- **Delete**: Type `DELETE` to start a 30-second countdown. **Undo** cancels the entire selection before any repository is deleted. Keep the popup open for deletion to proceed.
 - **Transfer**: Must type repo name + new owner
 
 ---

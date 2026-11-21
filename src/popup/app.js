@@ -7,7 +7,7 @@ import { showToast } from './components/toast.js';
 import { showProgress, hideProgress } from './components/progress.js';
 import { registerCommands, openPalette, isPaletteOpen } from './components/command-palette.js';
 import { initTheme, cycleTheme, getTheme, THEMES } from './components/theme.js';
-import { scheduleSoftDelete, cancelSoftDelete, isPending } from './components/soft-delete.js';
+import { scheduleSoftDelete, cancelSoftDelete, UNDO_WINDOW_MS } from './components/soft-delete.js';
 
 const state = createState();
 const pendingDeleteRepos = new Set();
@@ -867,71 +867,76 @@ async function handleFork(fullName) {
   });
 }
 
-function showUndoToast(fullName) {
-  const repoName = fullName.split('/')[1];
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
-
+function showUndoToast(label, onUndo) {
   const el = document.createElement('div');
   el.className = 'fh-undo-toast relative overflow-hidden animate-toast-enter';
   el.setAttribute('role', 'alert');
   el.innerHTML = `
     <span class="text-white shrink-0 p-1 rounded-lg bg-white/10">${icon('trash', { size: 12 })}</span>
-    <span class="flex-1 font-medium text-white">${escapeHtml(repoName)} will be deleted</span>
-    <button class="fh-undo-btn" data-undo="${escapeHtml(fullName)}">Undo</button>
-    <div class="fh-countdown-bar" style="animation-duration: 30s"></div>
+    <span class="flex-1 font-medium text-white">${escapeHtml(label)} will be deleted</span>
+    <button class="fh-undo-btn">Undo</button>
+    <div class="fh-countdown-bar" style="animation-duration: ${UNDO_WINDOW_MS}ms"></div>
   `;
 
-  el.querySelector('.fh-undo-btn').addEventListener('click', () => {
-    cancelSoftDelete(fullName);
-    pendingDeleteRepos.delete(fullName);
-    renderRepos();
-    updateBulkBar();
-    el.remove();
-    showToast(`${repoName} restored`, 'success');
-  });
-
-  container.appendChild(el);
-  setTimeout(() => { if (el.parentNode) el.remove(); }, 30500);
+  el.querySelector('.fh-undo-btn').addEventListener('click', onUndo);
+  document.getElementById('toastContainer').appendChild(el);
+  return el;
 }
 
-async function handleDelete(fullName) {
-  const repoName = fullName.split('/')[1];
+async function deleteRepos(targets, label) {
+  const bulk = targets.length > 1;
+  let failed = 0;
+  for (const [i, fullName] of targets.entries()) {
+    if (bulk) showProgress('Delete', i, targets.length);
+    state.markBusy(fullName);
+    renderRepos();
+    try {
+      const res = await send('DELETE_REPO', { fullName });
+      if (!res.ok) throw new Error(res.error || 'Delete failed');
+      state.removeRepo(fullName);
+    } catch (err) {
+      failed++;
+      if (!bulk) showToast(err.message, 'error');
+    } finally {
+      state.unmarkBusy(fullName);
+    }
+  }
+
+  if (bulk) hideProgress();
+  if (!failed) showToast(`${label} deleted`, 'success');
+  else if (bulk) showToast(`Delete: ${targets.length - failed} done, ${failed} failed`, 'warning');
+}
+
+function handleDelete(targets) {
+  if (!targets.length) return;
+  if (targets.some(name => pendingDeleteRepos.has(name) || state.get().busyRepos.has(name))) {
+    showToast('A repository already has an action pending.', 'warning');
+    return;
+  }
+  const label = targets.length === 1 ? targets[0].split('/')[1] : `${targets.length} repos`;
   showModal({
-    title: `Delete ${escapeHtml(repoName)}?`,
-    body: `<p class="text-fh-red font-medium">This action is permanent and cannot be undone.</p>
-           <p class="mt-1.5 text-fh-text-muted">You'll have 30 seconds to undo after confirming.</p>`,
-    confirmText: 'Delete this repository',
+    title: `Delete ${label}?`,
+    body: `<p class="text-fh-red font-medium">All code, issues, and settings will be permanently deleted.</p>
+           <p class="mt-1.5 text-fh-text-muted">You'll have ${UNDO_WINDOW_MS / 1000} seconds to undo after confirming.</p>`,
+    confirmText: targets.length === 1 ? 'Delete this repository' : `Delete ${label}`,
     confirmClass: 'fh-btn-danger',
     typed: 'DELETE',
     dangerous: true,
     onConfirm: async () => {
-      pendingDeleteRepos.add(fullName);
+      targets.forEach(name => pendingDeleteRepos.add(name));
       renderRepos();
-      showUndoToast(fullName);
-
+      const toast = showUndoToast(label, () => cancelSoftDelete(targets));
       try {
-        await scheduleSoftDelete(
-          fullName,
-          async () => {
-            const res = await send('DELETE_REPO', { fullName });
-            pendingDeleteRepos.delete(fullName);
-            if (res.ok) {
-              state.removeRepo(fullName);
-              showToast(`${repoName} deleted`, 'success');
-            } else {
-              showToast(res.error || 'Delete failed', 'error');
-            }
-            renderRepos();
-            updateBulkBar();
-          },
-          () => {
-            pendingDeleteRepos.delete(fullName);
-          }
-        );
-      } catch (_) {
-        pendingDeleteRepos.delete(fullName);
+        const executed = await scheduleSoftDelete(targets, () => {
+          toast.remove();
+          return deleteRepos(targets, label);
+        });
+        if (!executed) showToast(`Deletion canceled: ${label}`, 'success');
+      } finally {
+        toast.remove();
+        targets.forEach(name => pendingDeleteRepos.delete(name));
         renderRepos();
+        updateBulkBar();
       }
     },
   });
@@ -1188,20 +1193,7 @@ function handleBulkFiles() {
 }
 
 function handleBulkDelete() {
-  const count = state.get().selected.size;
-  runBulkAction('Delete', async (fn) => {
-    const res = await send('DELETE_REPO', { fullName: fn });
-    if (!res.ok) throw new Error(res.error);
-    state.removeRepo(fn);
-  }, {
-    title: `Delete ${count} repos permanently?`,
-    body: `<p class="text-fh-red font-medium">This cannot be undone.</p>
-           <p class="mt-1.5 text-fh-text-muted">All code, issues, and settings for ${count} repos will be lost forever.</p>`,
-    confirmText: `Delete ${count} repos`,
-    confirmClass: 'fh-btn-danger',
-    typed: 'DELETE',
-    dangerous: true,
-  });
+  handleDelete([...state.get().selected]);
 }
 
 function handleBulkTopics() {
@@ -1506,7 +1498,7 @@ function bindEvents() {
 
     const delBtn = e.target.closest('.delete-btn');
     if (delBtn) {
-      handleDelete(delBtn.dataset.name);
+      handleDelete([delBtn.dataset.name]);
       return;
     }
 
