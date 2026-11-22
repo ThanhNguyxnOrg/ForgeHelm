@@ -60,7 +60,7 @@ Managing dozens (or hundreds) of GitHub repositories is painful. Changing visibi
 
 ### 🛡️ Safety & Security
 
-- 🔐 **Classic PAT first** — aligned with proven reference workflow (`repo` + `delete_repo`)
+- 🔐 **Classic PAT first** — start with everyday permissions; enable delete only when needed
 - ⚠️ **Typed confirmation** for destructive actions (delete, transfer)
 - 🚫 **Busy-lock system** — prevents double-actions on in-progress repos
 - 📊 **Rate limit monitoring** — real-time GitHub API quota tracking
@@ -109,7 +109,7 @@ ForgeHelm is optimized for **Personal Access Token (classic)** flow, matching th
 1. Open [GitHub Settings → Developer Settings → Personal access tokens (classic)](https://github.com/settings/tokens)
 2. Click **Generate new token (classic)**
 3. Set token name and expiration
-4. Enable scopes below
+4. Enable only the scopes needed for your everyday features below
 5. Generate token and paste it into ForgeHelm
 
 #### 🧪 Built-in Token Check (Test Key)
@@ -117,46 +117,62 @@ ForgeHelm is optimized for **Personal Access Token (classic)** flow, matching th
 After you click **Save Token**, ForgeHelm now runs a capability preflight:
 - Validates authentication (`/user`)
 - Checks detected classic scopes from `X-OAuth-Scopes`
-- Reports missing critical scopes (`repo`, `delete_repo`) before destructive actions
+- Reports missing classic scopes as warnings; these do not block saving or everyday features
 
-If the checker says a scope is missing, regenerate your classic PAT with the required scopes and save again.
+Without delete permission, the check shows a neutral "Delete disabled" notice, not a missing-scope warning. Fine-grained permissions cannot be inferred from this classic scope header.
 
 #### ✅ Classic PAT Scopes (Recommended)
 
 | Scope | Why it is needed |
 |-------|------------------|
-| `repo` | Required for listing repos and all write operations (visibility, archive, transfer, fork, topics, edit) |
-| `delete_repo` | Required for delete repository API |
-| `read:org` | Optional, useful when working with org-owned repositories |
+| `repo` | Everyday access to private repositories and repository writes (visibility, archive, transfer, fork, topics, edit, files) |
+| `public_repo` | Narrower alternative for public-repository writes only; private repositories need `repo` |
+
+For public browsing only, no repository scope is needed. ForgeHelm's listed endpoints do not require `read:org` or private profile access (`read:user`). Organization policies and your repository role still apply.
 
 #### 🔐 Required Scopes by Feature (Classic PAT)
 
 > [!IMPORTANT]
-> For full ForgeHelm functionality, generate a **classic PAT** with at least `repo` and `delete_repo`.
+> Start without delete permission. Add permissions only for features you intend to use.
 
 | Feature | Required classic scope(s) | API Endpoint |
 |---------|---------------------------|--------------|
-| 📋 List repos | `repo` | `GET /user/repos` |
-| 🔍 Search / filter / sort | `repo` | (client-side + listed data) |
+| 📋 List repos | `repo` for private repos; none for public only | `GET /user/repos` |
+| 🔍 Search / filter / sort | No additional scope | (client-side + listed data) |
 | 📝 Edit description | `repo` | `PATCH /repos/{owner}/{repo}` |
 | 🔓 Change visibility | `repo` | `PATCH /repos/{owner}/{repo}` |
 | 📦 Archive / Unarchive | `repo` | `PATCH /repos/{owner}/{repo}` |
-| 🗑️ Delete repository | `repo` + `delete_repo` | `DELETE /repos/{owner}/{repo}` |
 | 📤 Transfer ownership | `repo` | `POST /repos/{owner}/{repo}/transfer` |
 | 🍴 Fork repository | `repo` | `POST /repos/{owner}/{repo}/forks` |
 | 🏷️ Manage topics | `repo` | `PUT /repos/{owner}/{repo}/topics` |
-| 🚦 CI status badges | `repo` | `GET /repos/{owner}/{repo}/actions/runs` |
-| 📊 Rate limit dashboard | `repo` | `GET /rate_limit` |
+| 📄 Read / write files | `repo` (also `workflow` when writing workflow files) | `GET /repos/{owner}/{repo}/contents/{path}`, `PUT /repos/{owner}/{repo}/contents/{path}` |
+| 🏷️ Read topics / languages | `repo` for private repos; none for public only | `GET /repos/{owner}/{repo}/topics`, `GET /repos/{owner}/{repo}/languages` |
+| 🚦 CI status badges | `repo` for private repos; none for public only | `GET /repos/{owner}/{repo}/actions/runs` |
+| 📊 Rate limit dashboard / token validation | No additional scope | `GET /rate_limit`, `GET /user` |
+
+For public-only writes in the table, use `public_repo` instead of `repo`.
 
 <details>
 <summary>🔧 <b>Fine-grained PAT</b> (optional fallback only)</summary>
 
-If you still prefer fine-grained PAT, grant repo access and at minimum:
-- `Administration: Read and write`
-- `Metadata: Read`
-- `Actions: Read` (for CI badges)
+Select only the repositories you need and start with `Metadata: Read` (listing, topics and languages). Add permissions only for the features you use:
+- `Actions: Read` for CI badges
+- `Contents: Read` for reading files; `Contents: Read and write` for writing files (also `Workflows: Write` when writing workflow files)
+- Repository `Administration: Read and write` for editing description, visibility, archive state or topics. **This also permits deletion**; GitHub does not offer a separate delete-only permission for fine-grained tokens. Leave it off for browsing and file work.
+
+Forking requires `Contents: Read` on the source and permission to create the destination repository (see [GitHub's fork permissions](https://docs.github.com/en/rest/repos/forks#create-a-fork)). Transfer does not support fine-grained PATs; use a classic PAT for that feature.
 
 </details>
+
+#### 🗑️ Optional: Enable Repository Deletion
+
+Only add delete permission when you intend to use `DELETE /repos/{owner}/{repo}`:
+- **Classic PAT:** Open [Tokens (classic)](https://github.com/settings/tokens), edit your token and add `delete_repo`, then save. Regenerate it (or create a replacement) if needed and paste the new value into ForgeHelm. This endpoint requires `delete_repo`, not an additional `repo` scope.
+- **Fine-grained PAT:** Open [Fine-grained tokens](https://github.com/settings/personal-access-tokens), edit your token, include the target repositories and set repository `Administration` to **Read and write**. Save the changes and obtain organization approval if required; if you replace/regenerate the token, save its new value in ForgeHelm. This permission also enables the administrative edits noted above.
+
+Your account must have admin access, and organization policies may still prohibit deletion. Remove the added permission afterward if no longer needed.
+
+Without sufficient permission, GitHub can reject deletion with a 403. After the undo window, a single delete shows GitHub's error plus a permission hint; a bulk delete shows only a done/failed count. Failed repositories stay in the list. The hint uses GitHub's permission header when available, otherwise generic token guidance; it is not always an exact diagnosis.
 
 > [!WARNING]
 > **Never share your token.** ForgeHelm stores it in `chrome.storage.local` and only sends it to `https://api.github.com`. No third-party servers, no analytics, no telemetry.
@@ -366,23 +382,23 @@ Your token lacks the required permissions for the operation you're trying to per
 **Classic PAT fix (recommended):**
 1. Go to [GitHub Settings → Tokens (classic)](https://github.com/settings/tokens)
 2. Generate or edit token
-3. Enable `repo` and `delete_repo` scopes
+3. Enable only the scope for your feature (see the setup tables above)
 4. Save and re-enter the token in ForgeHelm
 
 **Fine-grained fallback:**
 1. Go to [GitHub Settings → Fine-grained tokens](https://github.com/settings/tokens?type=beta)
-2. Set `Administration` to **Read & Write** and include target repos
+2. Include target repos and enable only the feature permissions listed above
 
-> 💡 ForgeHelm will tell you exactly which permission is missing when this error occurs.
+> 💡 ForgeHelm shows permission hints, but they may be generic. A 403 can also reflect repository roles or organization policies.
 
 </details>
 
 <details>
-<summary>🔴 <b>Delete shows "deleted" but repo still exists</b></summary>
+<summary>🔴 <b>Delete fails or reports a permission error</b></summary>
 
-This happens when the token lacks `delete_repo` (classic) or `Administration: Write` (fine-grained) permission.
+Check the [optional deletion setup](#️-optional-enable-repository-deletion), your repository admin access and organization policies. Failed repositories remain visible; bulk deletion reports a failure count rather than individual error details.
 
-**Fix:** Update your token permissions (see above), then retry the delete.
+**Fix:** Update only the permissions needed, then retry the delete.
 
 </details>
 

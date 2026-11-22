@@ -10,6 +10,59 @@ describe('GitHubClient token validation logic', () => {
     globalThis.fetch = jest.fn();
   });
 
+  test.each(['repo', 'repo, delete_repo', ''])('capability check treats delete permission as optional (%s)', async (scopes) => {
+    github.setToken('previous');
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'X-OAuth-Scopes': scopes }),
+    });
+
+    const result = await github.checkTokenCapabilities('ghp_test');
+
+    expect(result.hints).not.toEqual(expect.arrayContaining([expect.stringMatching(/Missing scope: delete_repo/)]));
+    expect(result.hints.some(hint => hint.startsWith('Classic PAT check passed'))).toBe(scopes.includes('repo'));
+    expect(result.scopes.delete_repo).toBe(scopes.includes('delete_repo'));
+    if (!scopes) expect(result.hints).toContain('Missing scope: repo');
+    if (!result.scopes.delete_repo) expect(result.hints).toContain('Delete disabled (optional: add delete_repo to enable)');
+    expect(github.token).toBe('previous');
+  });
+
+  test('capability check restores the token on authentication failure', async () => {
+    github.setToken('previous');
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+      json: async () => ({ message: 'Bad credentials' }),
+    });
+
+    await expect(github.checkTokenCapabilities('ghp_test')).rejects.toThrow('Token capability check failed: Bad credentials');
+    expect(github.token).toBe('previous');
+  });
+
+  test.each([
+    ['DELETE', '/repos/owner/repo', true],
+    ['PATCH', '/repos/owner/repo', false],
+    ['DELETE', '/repos/owner/repo/contents/file', false],
+    ['GET', '/user/repos', false],
+  ])('403 permission hints are feature-specific for %s %s', async (method, path, deletion) => {
+    github.setToken('ghp_test');
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      headers: new Headers(),
+      json: async () => ({ message: 'Resource not accessible by personal access token' }),
+    });
+
+    await expect(github.request(path, { method })).rejects.toThrow(
+      deletion ? /classic PAT: enable "delete_repo".*Administration: Read & Write/ : /Enable only the scope for this feature; see README token setup/
+    );
+    if (!deletion) {
+      await expect(github.request(path, { method })).rejects.not.toThrow('delete_repo');
+    }
+  });
+
   test('validateToken should throw if scopeCheck fails with 403', async () => {
     // Setup fetch mock for 2 requests:
     // 1st request to /user succeeds
