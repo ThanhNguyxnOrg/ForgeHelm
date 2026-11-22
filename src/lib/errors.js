@@ -7,13 +7,14 @@ export class ForgeHelmError extends Error {
 }
 
 export class GitHubApiError extends ForgeHelmError {
-  constructor(status, message, errors = [], docUrl = '', requiredPermissions = '') {
+  constructor(status, message, errors = [], docUrl = '', requiredPermissions = '', request = {}) {
     super(message, 'GITHUB_API');
     this.name = 'GitHubApiError';
     this.status = status;
     this.errors = errors;
     this.docUrl = docUrl;
     this.requiredPermissions = requiredPermissions;
+    this.request = request;
   }
 
   get isRateLimit() {
@@ -46,11 +47,10 @@ export class GitHubApiError extends ForgeHelmError {
     if (this.requiredPermissions) {
       return `Required permission: ${this.requiredPermissions}`;
     }
-    const msg = this.message.toLowerCase();
-    if (msg.includes('resource not accessible')) {
-      return 'Token lacks required permissions. For classic PAT: enable "repo" + "delete_repo" scopes. For fine-grained PAT: enable "Administration: Read & Write".';
+    if (this.request.method?.toUpperCase() === 'DELETE' && /^\/repos\/[^/]+\/[^/]+\/?$/.test(this.request.path || '')) {
+      return 'Token lacks required permissions. For repository deletion, classic PAT: enable "delete_repo". Fine-grained PAT: enable "Administration: Read & Write". Repository admin access and organization policies also apply.';
     }
-    return 'Access denied. Check your token permissions.';
+    return 'Token lacks required permissions. Enable only the scope for this feature; see README token setup. Check your repository role and organization policies.';
   }
 }
 
@@ -68,7 +68,7 @@ export class StorageError extends ForgeHelmError {
   }
 }
 
-export async function parseGitHubError(response) {
+export async function parseGitHubError(response, request = {}) {
   let body = {};
   try {
     body = await response.json();
@@ -83,5 +83,5 @@ export async function parseGitHubError(response) {
   // Extract required permissions from GitHub's response header (available on 403)
   const requiredPermissions = response.headers?.get('X-Accepted-GitHub-Permissions') || '';
 
-  return new GitHubApiError(response.status, message, errors, docUrl, requiredPermissions);
+  return new GitHubApiError(response.status, message, errors, docUrl, requiredPermissions, request);
 }

@@ -380,14 +380,13 @@ async function handleSaveToken() {
       const capData = caps.data;
       const missing = [];
       if (!capData.scopes.repo) missing.push('repo');
-      if (!capData.scopes.delete_repo) missing.push('delete_repo');
 
       if (missing.length > 0) {
         statusEl.className = 'text-2xs px-2.5 py-1.5 rounded-lg bg-fh-yellow-subtle text-fh-yellow';
         statusEl.textContent = `Authenticated as @${user.login}. Missing scope(s): ${missing.join(', ')}`;
         showToast(`Token warning: missing ${missing.join(', ')}`, 'warning');
       } else {
-        statusEl.textContent = `Authenticated as @${user.login} · token encrypted successfully`;
+        statusEl.textContent = `Authenticated as @${user.login} · token encrypted successfully${capData.scopes.delete_repo ? '' : ' · Delete disabled (optional: add delete_repo to enable)'}`;
       }
     } else {
       statusEl.textContent = `Authenticated as @${user.login} · token encrypted successfully`;
@@ -503,20 +502,23 @@ async function updatePinSettingsUI() {
         
         const deleteIndicator = document.getElementById('capScopeDelete');
         if (deleteIndicator) {
-          deleteIndicator.className = `w-2 h-2 rounded-full transition-colors ${caps.scopes.delete_repo ? 'bg-fh-green' : 'bg-fh-red'}`;
+          deleteIndicator.className = `w-2 h-2 rounded-full transition-colors ${caps.scopes.delete_repo ? 'bg-fh-green' : 'bg-fh-text-muted'}`;
+          deleteIndicator.title = caps.scopes.delete_repo ? 'Delete enabled' : 'Delete disabled (optional: add delete_repo to enable)';
         }
         
         const warnEl = document.getElementById('capWarnings');
         if (warnEl) {
+          warnEl.classList.toggle('text-fh-yellow', !caps.scopes.repo);
+          warnEl.classList.toggle('text-fh-text-muted', caps.scopes.repo);
           const missing = [];
           if (!caps.scopes.repo) missing.push('repo');
-          if (!caps.scopes.delete_repo) missing.push('delete_repo');
           
           if (missing.length > 0) {
             warnEl.textContent = `⚠️ Missing scope: ${missing.join(', ')}`;
             warnEl.classList.remove('hidden');
           } else {
-            warnEl.classList.add('hidden');
+            warnEl.textContent = caps.scopes.delete_repo ? '' : 'Delete disabled (optional: add delete_repo to enable)';
+            warnEl.classList.toggle('hidden', caps.scopes.delete_repo);
           }
         }
       } else {

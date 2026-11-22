@@ -119,7 +119,7 @@ After you click **Save Token**, ForgeHelm now runs a capability preflight:
 - Checks detected classic scopes from `X-OAuth-Scopes`
 - Reports missing classic scopes as warnings; these do not block saving or everyday features
 
-The delete warning is expected if you have not enabled optional deletion. Fine-grained permissions cannot be inferred from this classic scope header.
+Without delete permission, the check shows a neutral "Delete disabled" notice, not a missing-scope warning. Fine-grained permissions cannot be inferred from this classic scope header.
 
 #### ✅ Classic PAT Scopes (Recommended)
 

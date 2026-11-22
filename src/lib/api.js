@@ -71,7 +71,7 @@ class GitHubClient {
 
       if (res.ok || res.status === 204) return res;
 
-      const apiError = await parseGitHubError(res);
+      const apiError = await parseGitHubError(res, { method: opts.method || 'GET', path: new URL(url).pathname });
 
       if (apiError.isRateLimit && attempt < retries) {
         const retryAfter = res.headers.get('Retry-After');
@@ -148,11 +148,11 @@ class GitHubClient {
         result.hints.push('Missing scope: repo');
       }
       if (!result.scopes.delete_repo) {
-        result.hints.push('Missing scope: delete_repo (required for delete operations)');
+        result.hints.push('Delete disabled (optional: add delete_repo to enable)');
       }
 
-      if (result.tokenType === 'classic' && result.scopes.repo && result.scopes.delete_repo) {
-        result.hints.push('Classic PAT check passed: repo + delete_repo detected.');
+      if (result.tokenType === 'classic' && result.scopes.repo) {
+        result.hints.push('Classic PAT check passed: repository access detected.');
       }
 
       return result;
