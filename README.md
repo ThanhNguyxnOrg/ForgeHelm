@@ -82,6 +82,15 @@ Managing dozens (or hundreds) of GitHub repositories is painful. Changing visibi
 
 ## 🚀 Installation
 
+### From the Release ZIP (Recommended)
+
+1. Download `ForgeHelm-vX.Y.Z.zip` (e.g. `ForgeHelm-v1.2.0.zip`) from the [latest release](https://github.com/ThanhNguyxnOrg/ForgeHelm/releases/latest)
+2. Extract it into a new, empty folder — the ZIP has no top-level folder, so `manifest.json` sits directly inside the folder you extract to
+3. Open `chrome://extensions` and enable **Developer mode**
+4. Click **Load unpacked** and select the folder that contains `manifest.json`
+
+The ZIP is prebuilt (CSS included), so no Node.js or build step is needed. It contains the latest release; build from source to get changes merged since then.
+
 ### From Source (Developer)
 
 ```bash
